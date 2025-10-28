@@ -3,12 +3,10 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Adiciona controllers e Swagger
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Configuração do banco de dados com retry automático
 builder.Services.AddDbContext<InstitutoDbContext>(options =>
     options.UseSqlServer(
         builder.Configuration.GetConnectionString("DefaultConnection"),
@@ -24,7 +22,6 @@ builder.Services.AddDbContext<InstitutoDbContext>(options =>
 
 var app = builder.Build();
 
-// Executa migração com tentativas e atraso, para dar tempo do SQL iniciar
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<InstitutoDbContext>();
@@ -36,17 +33,17 @@ using (var scope = app.Services.CreateScope())
     {
         try
         {
-            Console.WriteLine("🟡 Tentando aplicar migrações...");
+            Console.WriteLine("Tentando aplicar migrações...");
             db.Database.Migrate();
-            Console.WriteLine("✅ Migrações aplicadas com sucesso!");
+            Console.WriteLine("Migrações aplicadas com sucesso!");
             break;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Tentativa {i + 1} falhou: {ex.Message}");
+            Console.WriteLine($"Tentativa {i + 1} falhou: {ex.Message}");
             if (i == maxRetries - 1)
             {
-                Console.WriteLine("🚨 Não foi possível conectar ao banco após várias tentativas.");
+                Console.WriteLine("Não foi possível conectar ao banco após várias tentativas.");
                 throw;
             }
             Thread.Sleep(delay);
@@ -54,7 +51,6 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
-// Middlewares padrão
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
