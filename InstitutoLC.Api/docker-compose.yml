@@ -6,7 +6,7 @@ services:
     container_name: instituto-sql
     environment:
       - ACCEPT_EULA=Y
-      - SA_PASSWORD=YourStrong@Passw0rd
+      - SA_PASSWORD=${SA_PASSWORD}
     ports:
       - "1433:1433"
     volumes:
@@ -23,7 +23,7 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: "http://+:80"
-      ConnectionStrings__DefaultConnection: "Server=db,1433;Database=InstitutoLC;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True;"
+      ConnectionStrings__DefaultConnection: "Server=db,1433;Database=InstitutoLC;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True;"
     ports:
       - "8080:80"
     restart: unless-stopped
