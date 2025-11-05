@@ -1,6 +1,6 @@
 # Instituto LC - API de Cadastro de Alunos
 
-API RESTful desenvolvida em .NET 8 para cadastro e gerenciamento de alunos de uma instituição de ensino.
+API RESTful desenvolvida em .NET 9 para cadastro e gerenciamento de alunos de uma instituição de ensino.
 
 ## Funcionalidades
 
