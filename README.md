@@ -2,7 +2,7 @@
 
 API RESTful desenvolvida em .NET 8 para cadastro e gerenciamento de alunos de uma instituição de ensino.
 
-## 📋 Funcionalidades
+## Funcionalidades
 
 - **Cadastro completo de alunos** incluindo:
 
@@ -20,14 +20,14 @@ API RESTful desenvolvida em .NET 8 para cadastro e gerenciamento de alunos de um
   - Atualizar aluno existente
   - Deletar aluno
 
-## 🚀 Tecnologias Utilizadas
+Tecnologias Utilizadas
 
-- .NET 8
+- .NET 9
 - Entity Framework Core 8
 - SQL Server
 - Swagger/OpenAPI
 
-## 📦 Estrutura do Projeto
+## Estrutura do Projeto
 
 ```
 InstitutoLC.Api/
@@ -55,11 +55,11 @@ InstitutoLC.Api/
 └── appsettings.json
 ```
 
-## 🔧 Configuração
+## Configuração
 
 ### Pré-requisitos
 
-- .NET 8 SDK
+- .NET 9 SDK
 - SQL Server (LocalDB ou completo)
 
 ### Instalação
@@ -96,7 +96,7 @@ dotnet run
 https://localhost:5001/swagger
 ```
 
-## 📝 Endpoints da API
+## Endpoints da API
 
 ### Alunos
 
@@ -139,7 +139,7 @@ https://localhost:5001/swagger
 }
 ```
 
-## 🏥 Tipos de Enfermidades
+## Tipos de Enfermidades
 
 1. Bronquite/Asma
 2. Doença de Coração
@@ -151,25 +151,21 @@ https://localhost:5001/swagger
 8. Alergia
 9. Outros
 
-## 🏫 Tipos de Escola
+## Tipos de Escola
 
 1. Pública
 2. Privada
 
-## 📅 Turnos
+## Turnos
 
 1. Matutino
 2. Vespertino
 3. Noturno
 4. Integral
 
-## 🔐 Validações
+## Validações
 
 - CPF é único no sistema
 - Todos os campos obrigatórios são validados
 - Estado deve ter 2 caracteres (sigla)
 - Número de pessoas na casa deve estar entre 1 e 50
-
-## 📄 Licença
-
-Este projeto é de código aberto.
