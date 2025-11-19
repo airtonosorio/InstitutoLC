@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lucimário Caitano</title>
+    <link rel="stylesheet" href="css/config.css">
+    <script src="https://kit.fontawesome.com/802a537608.js" crossorigin="anonymous"></script>
+</head>
+<body>
+    <section class="barraLateral">
+        <a href="home.html"><i class="fa-solid fa-house"></i></a>
+        <a href="lista.html"><i class="fa-solid fa-bars"></i></a>
+        <a href="config.html" id="config"><i class="fa-solid fa-gear"></i></a>
+    </section>
+    <section class="todoConteudo">
+        <header>
+            <h1>Configurações</h1>
+        </header>
+        <main>
+            <div class="botoes">
+                <button class="importar">Importar Excel</button>
+                <button class="exportar">Exportar CSV</button>
+            </div>
+            <div style="margin-top: 30px; padding: 20px; background: #f9f9f9; border-radius: 5px;">
+                <h3>Instruções para Importação</h3>
+                <p>O arquivo Excel deve conter as seguintes colunas na primeira linha:</p>
+                <ul>
+                    <li><strong>Nome</strong> - Nome completo do aluno</li>
+                    <li><strong>Data de Nascimento</strong> - Data no formato dd/mm/aaaa</li>
+                    <li><strong>RG</strong> - Número do RG</li>
+                    <li><strong>CPF</strong> - CPF do aluno</li>
+                    <li><strong>Endereço</strong> - Endereço completo</li>
+                    <li><strong>Número</strong> - Número do endereço</li>
+                    <li><strong>Bairro</strong> - Bairro</li>
+                    <li><strong>Município</strong> - Município</li>
+                    <li><strong>Estado</strong> - Estado (2 letras, ex: SP)</li>
+                    <li><strong>Escola</strong> - Nome da escola</li>
+                    <li><strong>Tipo Escola</strong> - "Pública" ou "Privada"</li>
+                    <li><strong>Série</strong> - Série do aluno</li>
+                    <li><strong>Turno</strong> - "Matutino", "Vespertino", "Noturno" ou "Integral"</li>
+                    <li><strong>Número de Pessoas na Casa</strong> - Número inteiro</li>
+                    <li><strong>Contato 1</strong> - Telefone de contato (obrigatório)</li>
+                    <li><strong>Contato 2</strong> - Telefone de contato (opcional)</li>
+                </ul>
+            </div>
+        </main>
+        <footer>
+            &copy Institudo Lucimário Caitano 2025
+        </footer>
+    </section>
+
+    <script src="../api.js"></script>
+    <script src="js/config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</body>
+</html>
+

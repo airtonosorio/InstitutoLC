@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lucimário Caitano</title>
+    <link rel="stylesheet" href="css/home.css">
+    <script src="https://kit.fontawesome.com/802a537608.js" crossorigin="anonymous"></script>
+</head>
+<body>
+    <div class="telaModal">
+        <div class="modalAdicionarAluno">
+            <h1>Preencha os dados do aluno</h1>
+            <form action="" class="formAddAluno">
+                <section class="localDados">
+                    <div class="dado">
+                        <label for="nomeAluno">Nome Completo:</label>
+                        <input type="text" name="nomeAluno" id="nomeAluno" placeholder="Nome completo do aluno" required>
+                    </div>
+                    <div class="dado">
+                        <label for="NascimentoAluno">Data de Nascimento:</label>
+                        <input type="text" name="NascimentoAluno" id="NascimentoAluno" placeholder="dd/mm/aaaa" inputmode="numeric" pattern="\d{2}/\d{2}/\d{4}" required>
+                    </div>
+                    <div class="dado">
+                        <label for="RG">RG:</label>
+                        <input type="text" name="RG" id="RG" placeholder="RG" required>
+                    </div>
+                    <div class="dado">
+                        <label for="cpfAluno">CPF do Aluno:</label>
+                        <input type="text" name="cpfAluno" id="cpfAluno" placeholder="000.000.000-00" required>
+                    </div>
+                    <div class="dado">
+                        <label for="enderecoAluno">Endereço:</label>
+                        <input type="text" name="enderecoAluno" id="enderecoAluno" placeholder="Endereço" required>
+                    </div>
+                    <div class="dado">
+                        <label for="numeroEndereco">N°:</label>
+                        <input type="text" name="numeroEndereco" id="numeroEndereco" placeholder="Número da residência" required>
+                    </div>
+                    <div class="dado">
+                        <label for="bairroAluno">Bairro:</label>
+                        <input type="text" name="bairroAluno" id="bairroAluno" placeholder="Bairro" required>
+                    </div>
+                    <div class="dado">
+                        <label for="municipioAluno">Município:</label>
+                        <input type="text" name="municipioAluno" id="municipioAluno" placeholder="Municipio" required>
+                    </div>
+                    <div class="dado">
+                        <label for="estadoAluno">Estado:</label>
+                        <input type="text" name="estadoAluno" id="estadoAluno" placeholder="UF" maxlength="2" required>
+                    </div>
+                    <div class="dado">
+                        <label for="escolaAluno">Escola:</label>
+                        <input type="text" name="escolaAluno" id="escolaAluno" placeholder="Nome da escola" required>
+                    </div>
+                    <div class="dado">
+                        <label for="tipoEscolaAluno">Tipo de Escola:</label>
+                        <select name="tipoEscolaAluno" id="tipoEscolaAluno" required>
+                            <option value="1">Pública</option>
+                            <option value="2">Privada</option>
+                        </select>
+                    </div>
+                    <div class="dado">
+                        <label for="serieAluno">Série:</label>
+                        <input type="text" name="serieAluno" id="serieAluno" placeholder="Série do aluno" required>
+                    </div>
+                    <div class="dado">
+                        <label for="turnoAluno">Turno:</label>
+                        <select name="turnoAluno" id="turnoAluno" required>
+                            <option value="1">Matutino</option>
+                            <option value="2">Vespertino</option>
+                            <option value="3">Noturno</option>
+                            <option value="4">Integral</option>
+                        </select>
+                    </div>
+                    <div class="dado">
+                        <label for="numeroPessoasCasa">Número de Pessoas na Casa:</label>
+                        <input type="number" name="numeroPessoasCasa" id="numeroPessoasCasa" placeholder="Número" min="1" value="1" required>
+                    </div>
+                    <div class="dado">
+                        <label for="contato1Aluno">Contato 1:</label>
+                        <input type="text" name="contato1Aluno" id="contato1Aluno" placeholder="(00) 00000-0000" required>
+                    </div>
+                    <div class="dado">
+                        <label for="contato2Aluno">Contato 2:</label>
+                        <input type="text" name="contato2Aluno" id="contato2Aluno" placeholder="(00) 00000-0000">
+                    </div>
+                    <div class="dado" style="grid-column: 1 / -1;">
+                        <label for="checkboxAnamnese" style="display: flex; align-items: center; gap: 10px;">
+                            <input type="checkbox" name="checkboxAnamnese" id="checkboxAnamnese" style="width: auto; height: auto;">
+                            Anamnese
+                        </label>
+                    </div>
+                </section>
+                <div class="btnModalAdicionar">
+                    <button type="button" class="btnCancelar" id="btnCancelarAluno">Cancelar</button>
+                    <button type="submit" class="btnAdicionar">Adicionar</button>
+                </div>
+            </form>
+        </div>    
+        <div class="modalAdicionarEmMassa">
+            <h1>Adicione alunos de forma rápida</h1>
+            <section class="localMassa">
+                <label for="textoArea">Adicione os alunos linha a linha:</label>
+                <textarea name="textoArea" id="textoArea" placeholder="Nome completo, Nascimento, CPF..."></textarea>
+            <div class="btnModalAdicionarMassa">
+                <button class="btnCancelar" id="btnCancelarMassa">Cancelar</button>
+                <button id="btnAdicionarMassa" class="btnAdicionar">Adicionar</button>
+            </div>
+            </section>
+        </div>
+        <div class="modalAnamnese">
+            <h1>Anamnese do Aluno</h1>
+            <div class="conteudoAnamnese">
+                <div class="opcoesAnamnese">
+                    <label class="opcaoAnamnese">
+                        <input type="checkbox" name="enfermidade" value="1" class="checkboxEnfermidade">
+                        Bronquite/Asma
+                    </label>
+                    <label class="opcaoAnamnese">
+                        <input type="checkbox" name="enfermidade" value="2" class="checkboxEnfermidade">
+                        Doença de Coração
+                    </label>
+                    <label class="opcaoAnamnese">
+                        <input type="checkbox" name="enfermidade" value="3" class="checkboxEnfermidade">
+                        Epilepsia/Convulsões
+                    </label>
+                    <label class="opcaoAnamnese">
+                        <input type="checkbox" name="enfermidade" value="4" class="checkboxEnfermidade">
+                        Diabetes
+                    </label>
+                    <label class="opcaoAnamnese">
+                        <input type="checkbox" name="enfermidade" value="5" class="checkboxEnfermidade">
+                        Problema Auditivo
+                    </label>
+                    <label class="opcaoAnamnese">
+                        <input type="checkbox" name="enfermidade" value="6" class="checkboxEnfermidade">
+                        Problema Visual
+                    </label>
+                    <label class="opcaoAnamnese">
+                        <input type="checkbox" name="enfermidade" value="7" class="checkboxEnfermidade">
+                        Doença Ortopédica
+                    </label>
+                    <label class="opcaoAnamnese">
+                        <input type="checkbox" name="enfermidade" value="8" class="checkboxEnfermidade">
+                        Alergia
+                    </label>
+                    <label class="opcaoAnamnese">
+                        <input type="checkbox" name="enfermidade" value="9" class="checkboxEnfermidade" id="checkboxOutros">
+                        Outros
+                    </label>
+                </div>
+                <div class="dado" id="descricaoOutrosContainer" style="display: none;">
+                    <label for="descricaoOutros">Especifique a anamnese:</label>
+                    <textarea name="descricaoOutros" id="descricaoOutros" rows="4" placeholder="Descreva a anamnese..." style="width: 100%; resize: vertical; font-size: 1em; padding: 5px; border: 2px solid var(--cor1); border-radius: 5px;"></textarea>
+                </div>
+            </div>
+            <div class="btnModalAnamnese">
+                <button type="button" class="btnCancelar" id="btnCancelarAnamnese">Cancelar</button>
+                <button type="button" class="btnAdicionar" id="btnConfirmarAnamnese">Confirmar</button>
+            </div>
+        </div>
+    </div>
+    <section class="barraLateral">
+        <a href="home.html" id="clicado"><i class="fa-solid fa-house"></i></a>
+        <a href="lista.html"><i class="fa-solid fa-bars"></i></a>
+        <a href="config.html" id="config"><i class="fa-solid fa-gear"></i></a>
+    </section>
+    <section class="todoConteudo">
+        <header>
+            <h1>Painel Geral - Instituto Lucimário Caitano</h1>
+        </header>
+        <main>
+            <div class="botoes">
+                <button class="addAluno">Adicionar Aluno</button>
+                <button class="adicionarEmMassa">Adicionar em Massa</button>
+            </div>
+            <section class="informacoes">
+                <h2>Total de alunos</h2>
+                <div class="totalAlunos">
+                    <div class="numeros">
+                        Matriculados<br>
+                        <span id="totalMatriculados">0</span>
+                    </div>
+                    <div class="numeros">
+                        Escolas Particulares<br>
+                        <span id="totalParticulares">0</span>
+                    </div>
+                    <div class="numeros">
+                        Escolas Públicas<br>
+                        <span id="totalPublicas">0</span>
+                    </div>
+                </div>
+            </section>
+            <section class="graficos">
+                <div class="pizza">
+                    <h3>Escolas</h3>
+                    <canvas id="graficoPizza" width="400" height="400"></canvas>
+                </div>
+                <div class="barras">
+                    <h3>Idades</h3>
+                    <canvas id="graficoBarras" width="400" height="400"></canvas>
+                </div>
+                <div class="linha">
+                    <h3>Total de Alunos</h3>
+                    <canvas id="graficoLinha" width="400" height="400"></canvas>
+                </div>
+                <div class="saude">
+                    <h3>Problemas de Saúde</h3>
+                    <canvas id="graficoSaude" width="400" height="400"></canvas>
+                </div>
+            </section>
+        </main>
+        <footer>
+            &copy Institudo Lucimário Caitano 2025
+        </footer>
+    </section>
+
+    <script src="../api.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="js/js.js"></script>
+    <script src="js/js-api.js"></script>
+    <script src="js/graficos.js"></script>
+</body>
+</html>
+

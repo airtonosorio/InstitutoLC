@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instituto Lucimário Caitano</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://kit.fontawesome.com/802a537608.js" crossorigin="anonymous"></script>
+</head>
+<body>
+    <h1>Instituto Lucimário Caitano</h1>
+    <section>
+        <div id="esquerda">
+            <img src="imagens/android-chrome-192x192.png" alt="logo">
+            <div id="texto">
+                <h2>Bem vindo!</h2>
+                <p>Preencha os dados corretamente para ter acesso ao sistema.</p>
+            </div>
+            <form action="login" method="post">
+                <div id="mail">
+                    <label for="email"><i class="fa-regular fa-envelope"></i></label>
+                    <input type="email" name="email" id="email" required placeholder="E-mail">
+                </div>
+                <div id="enha">
+                    <label for="senha"><i class="fa-solid fa-lock"></i></label>
+                    <input type="password" name="senha" id="senha" required placeholder="Senha" minlength="8">
+                </div>
+                <div id="botao">
+                    <input type="submit" id="btn" value="Entrar">
+                </div>
+            </form>
+            <p id="links"><a href="#">Cadastrar-se</a><a href="#">Esqueci a senha</a></p>
+        </div>
+        <div id="direita">
+        </div>
+    </section>
+    <footer>
+        &copy; 2025 Instituto Lucimário Caitano.
+    </footer>
+</body>
+</html>
