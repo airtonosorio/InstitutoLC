@@ -21,8 +21,8 @@ function inicializarLista() {
     // Configurar barra de pesquisa
     if (campoPesquisa) {
         campoPesquisa.addEventListener('input', (e) => {
-            console.log('🔍 Pesquisando:', e.target.value);
-            pesquisarAlunos(e.target.value);
+            const valor = e.target.value;
+            pesquisarAlunos(valor);
         });
         console.log('✅ Event listener de pesquisa configurado');
     } else {
@@ -63,9 +63,10 @@ if (document.readyState === 'loading') {
 
 async function carregarAlunos() {
     try {
-        console.log('Carregando alunos...');
+        console.log('📥 Carregando alunos...');
         const alunos = await AlunosAPI.listar();
-        console.log('Alunos carregados:', alunos);
+        console.log('📦 Resposta da API:', alunos);
+        console.log('📦 Tipo da resposta:', typeof alunos, Array.isArray(alunos));
         
         // Verificar se a resposta é um array ou um objeto com array
         let alunosArray = alunos;
@@ -79,10 +80,22 @@ async function carregarAlunos() {
         
         // Garantir que todosAlunos sempre seja um array
         todosAlunos = Array.isArray(alunosArray) ? alunosArray : []; // Armazenar todos os alunos
-        console.log('Total de alunos:', todosAlunos.length);
+        console.log('✅ Total de alunos carregados:', todosAlunos.length);
+        
+        // Debug: verificar estrutura do primeiro aluno se existir
+        if (todosAlunos.length > 0) {
+            const primeiroAluno = todosAlunos[0];
+            console.log('📋 Estrutura do primeiro aluno:', {
+                chaves: Object.keys(primeiroAluno),
+                nome: primeiroAluno.nome || primeiroAluno.Nome || 'NÃO ENCONTRADO',
+                cpf: primeiroAluno.cpf || primeiroAluno.CPF || 'NÃO ENCONTRADO',
+                alunoCompleto: primeiroAluno
+            });
+        }
+        
         exibirAlunosNaTabela(todosAlunos);
     } catch (error) {
-        console.error('Erro ao carregar alunos:', error);
+        console.error('❌ Erro ao carregar alunos:', error);
         todosAlunos = []; // Garantir que seja um array vazio em caso de erro
         mostrarMensagem('Erro ao carregar alunos: ' + error.message, 'error');
         // Mostrar mensagem na tabela
@@ -94,43 +107,102 @@ async function carregarAlunos() {
 }
 
 function pesquisarAlunos(termo) {
+    console.log('🔍 pesquisarAlunos chamada com:', termo);
+    console.log('📊 Total de alunos disponíveis:', todosAlunos?.length || 0);
+    
     // Garantir que todosAlunos é um array
     if (!Array.isArray(todosAlunos)) {
+        console.warn('⚠️ todosAlunos não é um array, convertendo...');
         todosAlunos = [];
+        return;
     }
     
+    // Se termo vazio, mostrar todos
     if (!termo || termo.trim() === '') {
+        console.log('📝 Termo vazio - exibindo todos os alunos');
         exibirAlunosNaTabela(todosAlunos);
         return;
     }
     
+    // Preparar termo de busca
     const termoLimpo = termo.toLowerCase().trim();
-    const termoLimpoNumerico = termo.replace(/\D/g, ''); // Remove caracteres não numéricos para busca por CPF
+    const termoNormalizado = termoLimpo.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const termoLimpoNumerico = termo.replace(/\D/g, '');
     
-    const alunosFiltrados = todosAlunos.filter(aluno => {
-        const nome = aluno.nome?.toLowerCase() || '';
-        const cpf = formatarCPF(aluno.cpf)?.toLowerCase() || '';
-        const cpfLimpo = aluno.cpf?.replace(/\D/g, '') || '';
-        
-        return nome.includes(termoLimpo) || 
-               cpf.includes(termoLimpo) || 
-               cpfLimpo.includes(termoLimpoNumerico);
+    console.log('🔍 Termos preparados:', {
+        original: termo,
+        limpo: termoLimpo,
+        normalizado: termoNormalizado,
+        numerico: termoLimpoNumerico
     });
     
+    // Filtrar alunos usando filter para melhor performance
+    const alunosFiltrados = todosAlunos.filter(aluno => {
+        try {
+            // Obter nome do aluno (suporta camelCase e PascalCase)
+            const nomeOriginal = aluno.nome || aluno.Nome || '';
+            const nomeAluno = String(nomeOriginal).toLowerCase();
+            const nomeNormalizado = nomeAluno.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            
+            // Obter CPF do aluno (suporta camelCase e PascalCase)
+            const cpfOriginal = aluno.cpf || aluno.CPF || '';
+            const cpfFormatado = formatarCPF(cpfOriginal) || '';
+            const cpfLimpo = String(cpfOriginal).replace(/\D/g, '');
+            
+            // Verificar correspondências:
+            // 1. Busca por nome (case-insensitive, com acentos)
+            const matchNome = nomeAluno.includes(termoLimpo);
+            
+            // 2. Busca por nome normalizado (sem acentos)
+            const matchNomeNormalizado = nomeNormalizado.includes(termoNormalizado);
+            
+            // 3. Busca por CPF - só se o termo contiver números
+            let matchCPF = false;
+            if (termoLimpoNumerico.length > 0) {
+                // Busca por CPF formatado (ex: 123.456.789-00)
+                const matchCPFFormatado = cpfFormatado && cpfFormatado.toLowerCase().includes(termoLimpo);
+                // Busca por CPF limpo (apenas números)
+                const matchCPFLimpo = cpfLimpo && cpfLimpo.includes(termoLimpoNumerico);
+                matchCPF = matchCPFFormatado || matchCPFLimpo;
+            }
+            
+            // Retornar true se qualquer correspondência for encontrada
+            const encontrado = matchNome || matchNomeNormalizado || matchCPF;
+            
+            return encontrado;
+        } catch (error) {
+            console.error('Erro ao processar aluno na pesquisa:', error);
+            return false;
+        }
+    });
+    
+    console.log('✅ Resultado da pesquisa:', {
+        totalFiltrado: alunosFiltrados.length,
+        totalOriginal: todosAlunos.length,
+        alunos: alunosFiltrados.map(a => a.nome || a.Nome)
+    });
+    
+    // Exibir resultados filtrados
     exibirAlunosNaTabela(alunosFiltrados);
 }
 
 function exibirAlunosNaTabela(alunos) {
     const tbody = document.getElementById('tbodyAlunos') || document.querySelector('#tabelaAlunos tbody');
-    if (!tbody) return;
+    if (!tbody) {
+        console.error('❌ tbody não encontrado!');
+        return;
+    }
 
+    // Limpar tabela
     tbody.innerHTML = '';
 
+    // Se não houver alunos, exibir mensagem
     if (!alunos || alunos.length === 0) {
         tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 20px;">Nenhum aluno encontrado</td></tr>';
         return;
     }
 
+    // Adicionar cada aluno à tabela
     alunos.forEach(aluno => {
         const row = criarLinhaAluno(aluno);
         tbody.appendChild(row);
