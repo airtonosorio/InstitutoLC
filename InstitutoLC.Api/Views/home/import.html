@@ -4,19 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lucimário Caitano</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>">
-    <link rel="stylesheet" href="css/config.css">
+    <link rel="icon" type="image/svg+xml" href="../imagens/favicon.svg">
+    <link rel="icon" type="image/x-icon" href="../imagens/favicon.ico">
+    <link rel="icon" type="image/png" href="../imagens/favicon.png">
+    <link rel="stylesheet" href="css/import.css">
     <script src="https://kit.fontawesome.com/802a537608.js" crossorigin="anonymous"></script>
 </head>
 <body>
     <section class="barraLateral">
         <a href="home.html"><i class="fa-solid fa-house"></i></a>
         <a href="lista.html"><i class="fa-solid fa-bars"></i></a>
-        <a href="config.html" id="config"><i class="fa-solid fa-gear"></i></a>
+        <a href="import.html" id="config"><i class="fa-solid fa-file-import"></i></a>
     </section>
     <section class="todoConteudo">
         <header>
-            <h1>Configurações</h1>
+            <h1>Importar Excel</h1>
         </header>
         <main>
             <div class="botoes">
@@ -44,6 +46,9 @@
                     <li><strong>Contato 1</strong> - Telefone de contato (obrigatório)</li>
                     <li><strong>Contato 2</strong> - Telefone de contato (opcional)</li>
                 </ul>
+                <p style="margin-top: 15px; padding: 10px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;">
+                    <strong>Importante:</strong> A importação só será concluída se <strong>TODOS</strong> os registros do Excel forem válidos. Caso algum registro tenha erro, nenhum aluno será importado.
+                </p>
             </div>
         </main>
         <footer>
@@ -52,7 +57,7 @@
     </section>
 
     <script src="../api.js"></script>
-    <script src="js/config.js"></script>
+    <script src="js/import.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </body>
 </html>

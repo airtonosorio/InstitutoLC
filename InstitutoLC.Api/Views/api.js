@@ -55,7 +55,10 @@ async function apiRequest(endpoint, options = {}) {
                 }
             }
             
-            throw new Error(errorMessage);
+            // Criar erro e anexar dados completos da resposta
+            const error = new Error(errorMessage);
+            error.responseData = data; // Anexar dados completos para uso no tratamento de erro
+            throw error;
         }
         
         return data;

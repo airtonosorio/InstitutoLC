@@ -52,6 +52,24 @@ async function importarExcel(arquivo) {
         
     } catch (error) {
         document.body.removeChild(loadingDiv);
+        
+        // Verificar se o erro contém dados da resposta do servidor
+        if (error.responseData) {
+            const errorData = error.responseData;
+            // Se houver erros detalhados na resposta, mostrar modal com eles
+            if (errorData.erros && Array.isArray(errorData.erros) && errorData.erros.length > 0) {
+                exibirResultadoImportacao({
+                    sucesso: false,
+                    totalImportados: 0,
+                    totalErros: errorData.erros.length,
+                    alunos: [],
+                    erros: errorData.erros,
+                    message: errorData.message || 'A importação falhou porque existem erros no arquivo. Nenhum aluno foi importado.'
+                });
+                return;
+            }
+        }
+        
         mostrarMensagem('Erro ao importar arquivo: ' + error.message, 'error');
     }
 }
@@ -133,9 +151,20 @@ function criarModalResultado(resultado) {
           </div>`
         : '';
 
+    const mensagemStatus = resultado.sucesso === false 
+        ? `<div style="padding: 15px; background: #ffebee; border-left: 4px solid #f44336; border-radius: 4px; margin-bottom: 20px;">
+            <p style="margin: 0; color: #c62828; font-weight: bold;">${resultado.message || 'A importação falhou. Nenhum aluno foi importado.'}</p>
+          </div>`
+        : resultado.totalImportados > 0
+        ? `<div style="padding: 15px; background: #e8f5e9; border-left: 4px solid #4caf50; border-radius: 4px; margin-bottom: 20px;">
+            <p style="margin: 0; color: #2e7d32; font-weight: bold;">Importação concluída com sucesso! Todos os ${resultado.totalImportados} aluno(s) foram importados.</p>
+          </div>`
+        : '';
+
     modal.innerHTML = `
         <div style="background: white; padding: 30px; border-radius: 10px; max-width: 600px; max-height: 80vh; overflow-y: auto;">
             <h2 style="margin-top: 0;">Resultado da Importação</h2>
+            ${mensagemStatus}
             <div style="margin-bottom: 20px;">
                 <p><strong>Total Importados:</strong> ${resultado.totalImportados}</p>
                 <p><strong>Total de Erros:</strong> ${resultado.totalErros}</p>
@@ -157,7 +186,7 @@ function criarModalResultado(resultado) {
             carregarAlunos();
         }
         // Redirecionar para lista se estiver em outra página
-        if (window.location.pathname.includes('config')) {
+        if (window.location.pathname.includes('import')) {
             window.location.href = 'lista.html';
         }
     });

@@ -186,10 +186,10 @@ https://localhost:5001
      - Deletar aluno
      - Adicionar novo aluno
 
-3. **Configurações:**
-   - URL: `http://localhost:8080/Views/home/config.html`
+3. **Importar Excel:**
+   - URL: `http://localhost:8080/Views/home/import.html`
    - Funcionalidades:
-     - Importar alunos via Excel
+     - Importar alunos via Excel (importação atômica - tudo ou nada)
      - Exportar alunos para CSV
 
 4. **Login (se implementado):**
@@ -370,7 +370,7 @@ dotnet ef migrations add NomeDaMigration
 http://localhost:8080/                          → Página inicial (se configurada)
 http://localhost:8080/Views/home/home.html       → Dashboard
 http://localhost:8080/Views/home/lista.html     → Lista de alunos
-http://localhost:8080/Views/home/config.html    → Configurações
+http://localhost:8080/Views/home/import.html    → Importar Excel
 http://localhost:8080/Views/login/login.html    → Login
 http://localhost:8080/swagger                   → Documentação da API
 http://localhost:8080/api/alunos                → Endpoint da API
@@ -380,7 +380,7 @@ http://localhost:8080/api/alunos                → Endpoint da API
 ```
 http://localhost:5000/Views/home/home.html       → Dashboard
 http://localhost:5000/Views/home/lista.html     → Lista de alunos
-http://localhost:5000/Views/home/config.html    → Configurações
+http://localhost:5000/Views/home/import.html    → Importar Excel
 http://localhost:5000/swagger                   → Documentação da API
 http://localhost:5000/api/alunos                → Endpoint da API
 ```

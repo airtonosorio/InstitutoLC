@@ -342,7 +342,7 @@ public class AlunosController : ControllerBase
                         return BadRequest(new { message = $"Colunas obrigatórias faltando: {string.Join(", ", colunasFaltando)}" });
                     }
 
-                    // Processar linhas de dados
+                    // Processar linhas de dados - VALIDAÇÃO COMPLETA ANTES DE IMPORTAR
                     for (int row = 2; row <= rowCount; row++)
                     {
                         try
@@ -356,17 +356,73 @@ public class AlunosController : ControllerBase
 
                             // Data de nascimento
                             DateTime dataNascimento;
-                            var dataNascStr = worksheet.Cells[row, headers["data de nascimento"]].Value?.ToString()?.Trim();
-                            if (string.IsNullOrWhiteSpace(dataNascStr))
+                            var dataNascValue = worksheet.Cells[row, headers["data de nascimento"]].Value;
+                            
+                            if (dataNascValue == null)
                             {
                                 erros.Add($"Linha {row}: Data de nascimento é obrigatória");
                                 continue;
                             }
                             
-                            if (!DateTime.TryParse(dataNascStr, out dataNascimento))
+                            // Se a célula contém um objeto DateTime (quando Excel armazena como data)
+                            if (dataNascValue is DateTime dt)
                             {
-                                erros.Add($"Linha {row}: Data de nascimento inválida: {dataNascStr}");
-                                continue;
+                                dataNascimento = dt;
+                            }
+                            // Se for um número (número serial do Excel - pode ser double, decimal, float, int)
+                            else if (dataNascValue is double dbl)
+                            {
+                                dataNascimento = DateTime.FromOADate(dbl);
+                            }
+                            else if (dataNascValue is decimal dec)
+                            {
+                                dataNascimento = DateTime.FromOADate((double)dec);
+                            }
+                            else if (dataNascValue is float flt)
+                            {
+                                dataNascimento = DateTime.FromOADate((double)flt);
+                            }
+                            else if (dataNascValue is int intVal)
+                            {
+                                dataNascimento = DateTime.FromOADate((double)intVal);
+                            }
+                            // Tentar converter para double se for um número
+                            else if (double.TryParse(dataNascValue.ToString(), out double numValue))
+                            {
+                                // Verificar se parece um número serial do Excel (geralmente entre 1 e 100000)
+                                if (numValue > 1 && numValue < 1000000)
+                                {
+                                    dataNascimento = DateTime.FromOADate(numValue);
+                                }
+                                else
+                                {
+                                    erros.Add($"Linha {row}: Data de nascimento inválida (número serial inválido): {numValue}");
+                                    continue;
+                                }
+                            }
+                            // Se for string, tentar fazer parse
+                            else
+                            {
+                                var dataNascStr = dataNascValue?.ToString()?.Trim();
+                                if (string.IsNullOrWhiteSpace(dataNascStr))
+                                {
+                                    erros.Add($"Linha {row}: Data de nascimento é obrigatória");
+                                    continue;
+                                }
+                                
+                                // Tentar parsear com diferentes formatos
+                                if (!DateTime.TryParse(dataNascStr, System.Globalization.CultureInfo.InvariantCulture, 
+                                    System.Globalization.DateTimeStyles.None, out dataNascimento))
+                                {
+                                    // Tentar com formato específico dd/MM/yyyy
+                                    if (!DateTime.TryParseExact(dataNascStr, new[] { "dd/MM/yyyy", "d/M/yyyy", "dd-MM-yyyy", "d-M-yyyy" }, 
+                                        System.Globalization.CultureInfo.InvariantCulture, 
+                                        System.Globalization.DateTimeStyles.None, out dataNascimento))
+                                    {
+                                        erros.Add($"Linha {row}: Data de nascimento inválida: {dataNascStr}");
+                                        continue;
+                                    }
+                                }
                             }
 
                             var rg = worksheet.Cells[row, headers["rg"]].Value?.ToString()?.Trim() ?? "";
@@ -381,10 +437,17 @@ public class AlunosController : ControllerBase
                                 continue;
                             }
 
-                            // Verificar se CPF já existe
+                            // Verificar se CPF já existe no banco
                             if (await _context.Alunos.AnyAsync(a => a.CPF == cpf))
                             {
                                 erros.Add($"Linha {row}: CPF {cpf} já cadastrado");
+                                continue;
+                            }
+
+                            // Verificar se CPF já está na lista de importação (duplicatas no mesmo arquivo)
+                            if (alunosParaImportar.Any(a => a.CPF == cpf))
+                            {
+                                erros.Add($"Linha {row}: CPF {cpf} duplicado no arquivo");
                                 continue;
                             }
 
@@ -479,20 +542,46 @@ public class AlunosController : ControllerBase
                 }
             }
 
-            // Salvar alunos válidos
+            // IMPORTACAO ATOMICA: Se houver qualquer erro, não importa nada
+            if (erros.Any())
+            {
+                return BadRequest(new
+                {
+                    sucesso = false,
+                    message = "A importação falhou porque existem erros no arquivo. Nenhum aluno foi importado.",
+                    totalImportados = 0,
+                    totalErros = erros.Count,
+                    alunos = new List<object>(),
+                    erros = erros
+                });
+            }
+
+            // Se chegou aqui, todos os registros são válidos - importar tudo em uma transação
             if (alunosParaImportar.Any())
             {
-                _context.Alunos.AddRange(alunosParaImportar);
-                await _context.SaveChangesAsync();
+                using (var transaction = await _context.Database.BeginTransactionAsync())
+                {
+                    try
+                    {
+                        _context.Alunos.AddRange(alunosParaImportar);
+                        await _context.SaveChangesAsync();
+                        await transaction.CommitAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        await transaction.RollbackAsync();
+                        return StatusCode(500, new { message = $"Erro ao salvar no banco de dados: {ex.Message}" });
+                    }
+                }
             }
 
             return Ok(new
             {
                 sucesso = true,
                 totalImportados = alunosParaImportar.Count,
-                totalErros = erros.Count,
+                totalErros = 0,
                 alunos = sucessos,
-                erros = erros
+                erros = new List<string>()
             });
         }
         catch (Exception ex)
