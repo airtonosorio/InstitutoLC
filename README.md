@@ -1,175 +1,105 @@
-# Instituto LC - API de Cadastro de Alunos
+# Instituto LC
 
-API RESTful desenvolvida em .NET 8 para cadastro e gerenciamento de alunos de uma instituição de ensino.
+Sistema simples para cadastro e gerenciamento de alunos, com API em .NET 8, SQL Server em Docker e interface web estática.
 
-## 📋 Funcionalidades
+## Como rodar
 
-- **Cadastro completo de alunos** incluindo:
+1. Na raiz do projeto, crie o arquivo `.env` usando o `.env.example` como base.
 
-  - Dados pessoais (Nome, Data de Nascimento, RG, CPF)
-  - Endereço completo
-  - Informações escolares (Escola, Tipo, Série, Turno)
-  - Dados familiares (Número de pessoas na casa)
-  - Contatos
-  - Anamnese médica com enfermidades
+No PowerShell:
 
-- **Operações CRUD completas**:
-  - Listar todos os alunos
-  - Buscar aluno por ID
-  - Criar novo aluno
-  - Atualizar aluno existente
-  - Deletar aluno
-
-## 🚀 Tecnologias Utilizadas
-
-- .NET 8
-- Entity Framework Core 8
-- SQL Server
-- Swagger/OpenAPI
-
-## 📦 Estrutura do Projeto
-
-```
-InstitutoLC.Api/
-├── Controllers/
-│   └── AlunosController.cs
-├── Data/
-│   └── InstitutoDbContext.cs
-├── Models/
-│   ├── Entities/
-│   │   ├── Aluno.cs
-│   │   ├── AnamneseAluno.cs
-│   │   └── Enfermidade.cs
-│   ├── Enums/
-│   │   ├── TipoEscola.cs
-│   │   ├── Turno.cs
-│   │   └── TipoEnfermidade.cs
-│   └── DTOs/
-│       ├── CriarAlunoRequest.cs
-│       ├── AtualizarAlunoRequest.cs
-│       ├── AlunoResponse.cs
-│       ├── AnamneseDto.cs
-│       └── EnfermidadeDto.cs
-├── Migrations/
-├── Program.cs
-└── appsettings.json
+```powershell
+Copy-Item .env.example .env
 ```
 
-## 🔧 Configuração
+Ou manualmente, criando um arquivo chamado `.env`.
 
-### Pré-requisitos
-
-- .NET 8 SDK
-- SQL Server (LocalDB ou completo)
-
-### Instalação
-
-1. Clone o repositório
-
-2. Configure a connection string no `appsettings.json`:
-
-```json
-{
-  "ConnectionStrings": {
-    "DefaultConnection": "Server=localhost;Database=InstitutoLC;Trusted_Connection=True;TrustServerCertificate=True;"
-  }
-}
+```env
+SA_PASSWORD=SuaSenhaForte123!
 ```
 
-3. Execute as migrations:
+2. Escolha uma senha forte para `SA_PASSWORD`.
+
+Regras importantes:
+- use pelo menos 8 caracteres
+- misture letra maiuscula, letra minuscula, numero e simbolo
+- evite aspas e espacos
+
+3. Suba os containers na raiz do repositório:
 
 ```bash
-cd InstitutoLC.Api
-dotnet ef migrations add InitialCreate
-dotnet ef database update
+docker compose up -d
 ```
 
-4. Execute a aplicação:
+4. Abra no navegador:
+
+```text
+http://localhost:8080
+```
+
+## O que vai acontecer
+
+- o Docker sobe um SQL Server
+- a API sobe junto
+- a aplicacao tenta criar/aplicar as migrations automaticamente
+- a interface web abre direto pela raiz
+
+## Estrutura atual
+
+Tudo que faz a aplicacao rodar ficou na raiz:
+
+- `Program.cs`
+- `InstitutoLC.Api.csproj`
+- `docker-compose.yml`
+- `Dockerfile`
+- `appsettings.json`
+- `Controllers/`
+- `Data/`
+- `Models/`
+- `Migrations/`
+- `Views/`
+
+Arquivos extras ficaram separados:
+
+- `exemplos/` para planilhas de exemplo
+- `docs/legado/` para documentacao antiga que foi preservada
+
+## Arquivo .env
+
+O `.env` precisa ficar na raiz do projeto, no mesmo lugar do `docker-compose.yml`.
+
+Estrutura correta:
+
+```text
+InstitutoLC/
+|-- .env
+|-- docker-compose.yml
+|-- Dockerfile
+|-- Program.cs
+|-- Views/
+```
+
+Se o `.env` ficar em outra pasta, o Docker Compose nao vai ler a senha.
+
+## Acessos uteis
+
+- Sistema: `http://localhost:8080`
+- Swagger: `http://localhost:8080/swagger`
+- Tela principal: `http://localhost:8080/home/home.html`
+
+## Se algo der errado
+
+- confira se o Docker Desktop esta aberto
+- confira se a porta `8080` nao esta em uso
+- confira se a porta `1433` nao esta em uso
+- confira se o arquivo `.env` esta na raiz
+- confira se a senha do `.env` segue as regras do SQL Server
+
+## Observacao
+
+Se quiser apagar tudo e subir de novo depois:
 
 ```bash
-dotnet run
+docker compose down -v
+docker compose up -d
 ```
-
-5. Acesse o Swagger UI:
-
-```
-https://localhost:5001/swagger
-```
-
-## 📝 Endpoints da API
-
-### Alunos
-
-- `GET /api/alunos` - Lista todos os alunos
-- `GET /api/alunos/{id}` - Busca aluno por ID
-- `POST /api/alunos` - Cria novo aluno
-- `PUT /api/alunos/{id}` - Atualiza aluno existente
-- `DELETE /api/alunos/{id}` - Deleta aluno
-
-### Exemplo de Request - Criar Aluno
-
-```json
-{
-  "nome": "João Silva",
-  "dataNascimento": "2010-05-15",
-  "rg": "12.345.678-9",
-  "cpf": "123.456.789-00",
-  "endereco": "Rua das Flores",
-  "numeroEndereco": "123",
-  "bairro": "Centro",
-  "municipio": "São Paulo",
-  "estado": "SP",
-  "escola": "Escola Estadual ABC",
-  "tipoEscola": 1,
-  "serie": "5º Ano",
-  "turno": 1,
-  "numeroPessoasCasa": 4,
-  "contato1": "(11) 98765-4321",
-  "contato2": "(11) 3456-7890",
-  "anamnese": {
-    "possuiEnfermidade": true,
-    "observacoesGerais": "Necessita acompanhamento",
-    "enfermidades": [
-      {
-        "tipoEnfermidade": 1,
-        "descricao": "Bronquite leve"
-      }
-    ]
-  }
-}
-```
-
-## 🏥 Tipos de Enfermidades
-
-1. Bronquite/Asma
-2. Doença de Coração
-3. Epilepsia/Convulsões
-4. Diabetes
-5. Problema Auditivo
-6. Problema Visual
-7. Doença Ortopédica
-8. Alergia
-9. Outros
-
-## 🏫 Tipos de Escola
-
-1. Pública
-2. Privada
-
-## 📅 Turnos
-
-1. Matutino
-2. Vespertino
-3. Noturno
-4. Integral
-
-## 🔐 Validações
-
-- CPF é único no sistema
-- Todos os campos obrigatórios são validados
-- Estado deve ter 2 caracteres (sigla)
-- Número de pessoas na casa deve estar entre 1 e 50
-
-## 📄 Licença
-
-Este projeto é de código aberto.

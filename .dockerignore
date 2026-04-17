@@ -1,0 +1,17 @@
+bin/
+obj/
+.vs/
+.vscode/
+*.user
+*.suo
+*.cache
+*.log
+.env
+.env.local
+*.db
+*.db-shm
+*.db-wal
+.git
+docs/
+exemplos/
+

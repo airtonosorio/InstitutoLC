@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | Instituto Lucimario Caitano</title>
+    <link rel="icon" type="image/png" href="../imagens/favicon.png">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <script src="https://kit.fontawesome.com/802a537608.js" crossorigin="anonymous"></script>
+</head>
+<body>
+    <section class="barraLateral">
+        <a href="home.html" title="Inicio"><i class="fa-solid fa-house"></i></a>
+        <a href="lista.html" title="Lista de alunos"><i class="fa-solid fa-bars"></i></a>
+        <a href="dashboard.html" id="clicado" title="Dashboard"><i class="fa-solid fa-chart-line"></i></a>
+        <a href="import.html" title="Importacao"><i class="fa-solid fa-file-import"></i></a>
+    </section>
+
+    <section class="todoConteudo">
+        <header>
+            <div class="headerCopy">
+                <span class="eyebrow">Dashboard Executivo</span>
+                <h1>Visao pronta para reunioes, apresentacoes e acompanhamento diario</h1>
+                <p>Leia o perfil dos alunos em poucos segundos com filtros, indicadores e graficos claros.</p>
+            </div>
+        </header>
+
+        <main>
+            <section class="heroPanel">
+                <div class="heroContent">
+                    <span class="heroTag">Leitura rapida</span>
+                    <h2>Monte recortes por escola, turno, localidade e saude sem sair da tela</h2>
+                    <p>O dashboard usa os dados cadastrados no sistema e atualiza os indicadores em tempo real conforme os filtros.</p>
+                </div>
+                <div class="heroStats">
+                    <div class="heroStatCard">
+                        <small>Resultados no recorte</small>
+                        <strong id="heroTotal">0</strong>
+                    </div>
+                    <div class="heroStatCard">
+                        <small>Ultima atualizacao</small>
+                        <strong id="heroAtualizacao">--</strong>
+                    </div>
+                </div>
+            </section>
+
+            <section class="filtersPanel">
+                <div class="panelHeading">
+                    <div>
+                        <span>Filtros importantes</span>
+                        <h2>Refine a leitura do dashboard</h2>
+                    </div>
+                    <button type="button" id="limparFiltros" class="secondaryButton">Limpar filtros</button>
+                </div>
+
+                <div class="filterGrid">
+                    <label class="field fieldSearch">
+                        <span>Busca</span>
+                        <div class="inputWrap">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                            <input type="text" id="filtroBusca" placeholder="Nome, CPF, escola ou municipio">
+                        </div>
+                    </label>
+
+                    <label class="field">
+                        <span>Tipo de escola</span>
+                        <select id="filtroTipoEscola">
+                            <option value="">Todos</option>
+                            <option value="1">Publica</option>
+                            <option value="2">Privada</option>
+                        </select>
+                    </label>
+
+                    <label class="field">
+                        <span>Turno</span>
+                        <select id="filtroTurno">
+                            <option value="">Todos</option>
+                            <option value="1">Matutino</option>
+                            <option value="2">Vespertino</option>
+                            <option value="3">Noturno</option>
+                            <option value="4">Integral</option>
+                        </select>
+                    </label>
+
+                    <label class="field">
+                        <span>Estado</span>
+                        <select id="filtroEstado">
+                            <option value="">Todos</option>
+                        </select>
+                    </label>
+
+                    <label class="field">
+                        <span>Municipio</span>
+                        <select id="filtroMunicipio">
+                            <option value="">Todos</option>
+                        </select>
+                    </label>
+
+                    <label class="field">
+                        <span>Saude</span>
+                        <select id="filtroSaude">
+                            <option value="">Todos</option>
+                            <option value="com">Com registro</option>
+                            <option value="sem">Sem registro</option>
+                        </select>
+                    </label>
+                </div>
+            </section>
+
+            <section class="summaryStrip">
+                <p id="filtersSummary">Carregando dados do dashboard...</p>
+                <div id="activeChips" class="activeChips"></div>
+            </section>
+
+            <section class="metricGrid">
+                <article class="metricCard accentForest">
+                    <span class="metricLabel">Alunos no recorte</span>
+                    <strong id="metricTotal">0</strong>
+                    <p id="metricTotalMeta">Sem dados carregados.</p>
+                </article>
+
+                <article class="metricCard accentMint">
+                    <span class="metricLabel">Predominio de escola</span>
+                    <strong id="metricEscolas">0%</strong>
+                    <p id="metricEscolasMeta">Aguardando leitura.</p>
+                </article>
+
+                <article class="metricCard accentGold">
+                    <span class="metricLabel">Media de idade</span>
+                    <strong id="metricIdade">--</strong>
+                    <p id="metricIdadeMeta">Aguardando leitura.</p>
+                </article>
+
+                <article class="metricCard accentCoral">
+                    <span class="metricLabel">Saude no recorte</span>
+                    <strong id="metricSaude">0%</strong>
+                    <p id="metricSaudeMeta">Aguardando leitura.</p>
+                </article>
+
+                <article class="metricCard accentSea">
+                    <span class="metricLabel">Cobertura territorial</span>
+                    <strong id="metricTerritorio">0</strong>
+                    <p id="metricTerritorioMeta">Aguardando leitura.</p>
+                </article>
+
+                <article class="metricCard accentOlive">
+                    <span class="metricLabel">Turno dominante</span>
+                    <strong id="metricTurno">--</strong>
+                    <p id="metricTurnoMeta">Aguardando leitura.</p>
+                </article>
+            </section>
+
+            <section class="chartGrid">
+                <article class="chartPanel chartPanelLarge">
+                    <div class="panelHeading">
+                        <div>
+                            <span>Evolucao</span>
+                            <h3>Cadastros por mes</h3>
+                        </div>
+                        <p>Ultimos 6 meses</p>
+                    </div>
+                    <div class="canvasWrap">
+                        <canvas id="chartCadastros"></canvas>
+                    </div>
+                </article>
+
+                <article class="chartPanel">
+                    <div class="panelHeading">
+                        <div>
+                            <span>Distribuicao</span>
+                            <h3>Tipo de escola</h3>
+                        </div>
+                        <p>Publica x Privada</p>
+                    </div>
+                    <div class="canvasWrap">
+                        <canvas id="chartEscolas"></canvas>
+                    </div>
+                </article>
+
+                <article class="chartPanel">
+                    <div class="panelHeading">
+                        <div>
+                            <span>Jornada</span>
+                            <h3>Turnos</h3>
+                        </div>
+                        <p>Participacao por turno</p>
+                    </div>
+                    <div class="canvasWrap">
+                        <canvas id="chartTurnos"></canvas>
+                    </div>
+                </article>
+
+                <article class="chartPanel">
+                    <div class="panelHeading">
+                        <div>
+                            <span>Perfil</span>
+                            <h3>Faixas etarias</h3>
+                        </div>
+                        <p>Idade media do recorte</p>
+                    </div>
+                    <div class="canvasWrap">
+                        <canvas id="chartIdades"></canvas>
+                    </div>
+                </article>
+
+                <article class="chartPanel">
+                    <div class="panelHeading">
+                        <div>
+                            <span>Saude</span>
+                            <h3>Registro de enfermidades</h3>
+                        </div>
+                        <p>Com ou sem acompanhamento</p>
+                    </div>
+                    <div class="canvasWrap">
+                        <canvas id="chartSaude"></canvas>
+                    </div>
+                </article>
+            </section>
+
+            <section class="detailGrid">
+                <article class="detailPanel">
+                    <div class="panelHeading">
+                        <div>
+                            <span>Ranking</span>
+                            <h3>Municipios com mais alunos</h3>
+                        </div>
+                        <p>Participacao no recorte atual</p>
+                    </div>
+                    <div id="municipiosRanking" class="rankingList">
+                        <p class="emptyState">Carregando ranking...</p>
+                    </div>
+                </article>
+
+                <article class="detailPanel">
+                    <div class="panelHeading">
+                        <div>
+                            <span>Insights</span>
+                            <h3>Pontos para apresentar</h3>
+                        </div>
+                        <p>Resumo executivo automatico</p>
+                    </div>
+                    <ul id="insightsList" class="insightsList">
+                        <li class="emptyState">Carregando insights...</li>
+                    </ul>
+                </article>
+            </section>
+        </main>
+
+        <footer>
+            &copy; 2025 Instituto Lucimario Caitano.
+        </footer>
+    </section>
+
+    <script src="../api.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="js/dashboard.js"></script>
+</body>
+</html>
