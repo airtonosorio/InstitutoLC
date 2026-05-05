@@ -10,9 +10,6 @@ public class AtualizarAlunoRequest
 
     public DateTime? DataNascimento { get; set; }
 
-    [StringLength(20, ErrorMessage = "RG deve ter no máximo 20 caracteres")]
-    public string? RG { get; set; }
-
     [StringLength(14, ErrorMessage = "CPF deve ter no máximo 14 caracteres")]
     public string? CPF { get; set; }
 
@@ -49,6 +46,9 @@ public class AtualizarAlunoRequest
 
     [StringLength(20, ErrorMessage = "Contato 2 deve ter no máximo 20 caracteres")]
     public string? Contato2 { get; set; }
+
+    public TipoAtividade? Atividade1 { get; set; }
+    public TipoAtividade? Atividade2 { get; set; }
 
     public AnamneseDto? Anamnese { get; set; }
 }

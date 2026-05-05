@@ -2,6 +2,7 @@ using InstitutoLC.Api.Data;
 using InstitutoLC.Api.Models.DTOs;
 using InstitutoLC.Api.Models.Entities;
 using InstitutoLC.Api.Models.Enums;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using OfficeOpenXml;
@@ -11,6 +12,7 @@ namespace InstitutoLC.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class AlunosController : ControllerBase
 {
     private readonly InstitutoDbContext _context;
@@ -24,12 +26,19 @@ public class AlunosController : ControllerBase
     /// Lista todos os alunos
     /// </summary>
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<AlunoResponse>>> GetAlunos()
+    public async Task<ActionResult<IEnumerable<AlunoResponse>>> GetAlunos([FromQuery] TipoAtividade? atividade)
     {
-        var alunos = await _context.Alunos
+        var query = _context.Alunos
             .Include(a => a.Anamnese)
                 .ThenInclude(an => an!.Enfermidades)
-            .ToListAsync();
+            .AsQueryable();
+
+        if (atividade.HasValue)
+        {
+            query = query.Where(a => a.Atividade1 == atividade.Value || a.Atividade2 == atividade.Value);
+        }
+
+        var alunos = await query.ToListAsync();
 
         var response = alunos.Select(MapToResponse);
         return Ok(response);
@@ -70,7 +79,6 @@ public class AlunosController : ControllerBase
         {
             Nome = request.Nome,
             DataNascimento = request.DataNascimento,
-            RG = request.RG,
             CPF = request.CPF,
             Endereco = request.Endereco,
             NumeroEndereco = request.NumeroEndereco,
@@ -84,6 +92,8 @@ public class AlunosController : ControllerBase
             NumeroPessoasCasa = request.NumeroPessoasCasa,
             Contato1 = request.Contato1,
             Contato2 = request.Contato2,
+            Atividade1 = request.Atividade1,
+            Atividade2 = request.Atividade2,
             DataCadastro = DateTime.Now
         };
 
@@ -164,9 +174,6 @@ public class AlunosController : ControllerBase
         if (request.DataNascimento.HasValue)
             aluno.DataNascimento = request.DataNascimento.Value;
 
-        if (!string.IsNullOrWhiteSpace(request.RG))
-            aluno.RG = request.RG;
-
         if (!string.IsNullOrWhiteSpace(request.Endereco))
             aluno.Endereco = request.Endereco;
 
@@ -197,11 +204,17 @@ public class AlunosController : ControllerBase
         if (request.NumeroPessoasCasa.HasValue)
             aluno.NumeroPessoasCasa = request.NumeroPessoasCasa.Value;
 
-        if (!string.IsNullOrWhiteSpace(request.Contato1))
+        if (request.Contato1 != null)
             aluno.Contato1 = request.Contato1;
 
         if (request.Contato2 != null)
             aluno.Contato2 = request.Contato2;
+
+        if (request.Atividade1.HasValue || request.Atividade1 == null) // We allow clearing if necessary, but DTO might not specify
+            aluno.Atividade1 = request.Atividade1;
+            
+        if (request.Atividade2.HasValue || request.Atividade2 == null)
+            aluno.Atividade2 = request.Atividade2;
 
         // Atualizar anamnese
         if (request.Anamnese != null)
@@ -334,12 +347,12 @@ public class AlunosController : ControllerBase
                         }
                     }
 
-                    // Validar colunas obrigatórias
-                    var colunasObrigatorias = new[] { "nome", "data de nascimento", "rg", "cpf", "endereço", "número", "bairro", "município", "estado", "escola", "tipo escola", "série", "turno", "número de pessoas na casa", "contato 1" };
+                    // Validar colunas obrigatórias essenciais (Apenas Nome e CPF, o resto é tolerante)
+                    var colunasObrigatorias = new[] { "nome", "cpf" };
                     var colunasFaltando = colunasObrigatorias.Where(c => !headers.ContainsKey(c)).ToList();
                     if (colunasFaltando.Any())
                     {
-                        return BadRequest(new { message = $"Colunas obrigatórias faltando: {string.Join(", ", colunasFaltando)}" });
+                        return BadRequest(new { message = $"Colunas obrigatórias faltando para importação mínima: {string.Join(", ", colunasFaltando)}" });
                     }
 
                     // Processar linhas de dados - VALIDAÇÃO COMPLETA ANTES DE IMPORTAR
@@ -425,7 +438,6 @@ public class AlunosController : ControllerBase
                                 }
                             }
 
-                            var rg = worksheet.Cells[row, headers["rg"]].Value?.ToString()?.Trim() ?? "";
                             var cpf = worksheet.Cells[row, headers["cpf"]].Value?.ToString()?.Trim() ?? "";
                             
                             // Limpar CPF (remover pontos e traços)
@@ -514,7 +526,6 @@ public class AlunosController : ControllerBase
                             {
                                 Nome = nome,
                                 DataNascimento = dataNascimento,
-                                RG = rg,
                                 CPF = cpf,
                                 Endereco = endereco,
                                 NumeroEndereco = numeroEndereco,
@@ -597,7 +608,6 @@ public class AlunosController : ControllerBase
             Id = aluno.Id,
             Nome = aluno.Nome,
             DataNascimento = aluno.DataNascimento,
-            RG = aluno.RG,
             CPF = aluno.CPF,
             Endereco = aluno.Endereco,
             NumeroEndereco = aluno.NumeroEndereco,
@@ -611,6 +621,8 @@ public class AlunosController : ControllerBase
             NumeroPessoasCasa = aluno.NumeroPessoasCasa,
             Contato1 = aluno.Contato1,
             Contato2 = aluno.Contato2,
+            Atividade1 = aluno.Atividade1,
+            Atividade2 = aluno.Atividade2,
             DataCadastro = aluno.DataCadastro,
             DataAtualizacao = aluno.DataAtualizacao,
             Anamnese = aluno.Anamnese == null ? null : new AnamneseResponse
