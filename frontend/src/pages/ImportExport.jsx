@@ -1,0 +1,236 @@
+import { useState, useRef } from 'react';
+import * as XLSX from 'xlsx';
+import { Upload, Download, FileSpreadsheet, Filter } from 'lucide-react';
+import { differenceInYears, parseISO } from 'date-fns';
+import api from '../api';
+import './ImportExport.css';
+
+const atividadesMap = {
+  1: 'Futebol de campo',
+  2: 'Futsal',
+  3: 'Futsal contraturno',
+  4: 'Judo',
+  5: 'Karate',
+  6: 'Jiu-jitsu',
+  7: 'Ballet',
+  8: 'Capoeira',
+  9: 'Triathlon',
+  10: 'Futebol Feminino',
+  11: 'Orquestra de Musica',
+  12: 'Creche'
+};
+
+const turnosMap = {
+  0: 'Matutino',
+  1: 'Vespertino',
+  2: 'Noturno',
+  3: 'Integral'
+};
+
+export default function ImportExport() {
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState(null);
+  const fileInputRef = useRef(null);
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState({
+    atividade: '',
+    idadeMin: '',
+    idadeMax: '',
+    dataInicio: '',
+    dataFim: ''
+  });
+
+  const handleImport = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('arquivo', file);
+    setLoading(true);
+    setMsg(null);
+
+    try {
+      const res = await api.post('/Alunos/importar', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      setMsg({ type: 'success', text: `Sucesso! ${res.data.totalImportados} alunos importados.` });
+    } catch (err) {
+      setMsg({
+        type: 'error',
+        text: err.response?.data?.message || 'Erro ao importar arquivo.',
+        detalhes: err.response?.data?.erros || []
+      });
+    } finally {
+      setLoading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleExport = async () => {
+    setLoading(true);
+    try {
+      const res = await api.get('/Alunos');
+      let alunos = res.data;
+
+      if (filters.atividade !== '') {
+        const atividade = parseInt(filters.atividade);
+        alunos = alunos.filter(a => a.atividade1 === atividade || a.atividade2 === atividade);
+      }
+      if (filters.idadeMin || filters.idadeMax) {
+        const today = new Date();
+        alunos = alunos.filter(a => {
+          const age = differenceInYears(today, parseISO(a.dataNascimento));
+          const min = filters.idadeMin ? parseInt(filters.idadeMin) : 0;
+          const max = filters.idadeMax ? parseInt(filters.idadeMax) : 999;
+          return age >= min && age <= max;
+        });
+      }
+      if (filters.dataInicio) {
+        const start = new Date(filters.dataInicio);
+        start.setHours(0, 0, 0, 0);
+        alunos = alunos.filter(a => new Date(a.dataCadastro) >= start);
+      }
+      if (filters.dataFim) {
+        const end = new Date(filters.dataFim);
+        end.setHours(23, 59, 59, 999);
+        alunos = alunos.filter(a => new Date(a.dataCadastro) <= end);
+      }
+
+      if (alunos.length === 0) {
+        setMsg({ type: 'error', text: 'Nenhum aluno encontrado com esses filtros para exportacao.' });
+        return;
+      }
+
+      const dataToExport = alunos.map(a => ({
+        Nome: a.nome,
+        'Data de Nascimento': new Date(a.dataNascimento).toLocaleDateString('pt-BR'),
+        Idade: differenceInYears(new Date(), parseISO(a.dataNascimento)),
+        CPF: a.cpf,
+        Endereco: a.endereco,
+        Numero: a.numeroEndereco,
+        Bairro: a.bairro,
+        Municipio: a.municipio,
+        Estado: a.estado,
+        Escola: a.escola,
+        'Tipo Escola': a.tipoEscola === 0 ? 'Publica' : 'Privada',
+        Serie: a.serie,
+        Turno: turnosMap[a.turno],
+        'Numero de Pessoas na Casa': a.numeroPessoasCasa,
+        'Contato 1': a.contato1,
+        'Contato 2': a.contato2 || '',
+        'Atividade 1': atividadesMap[a.atividade1],
+        'Atividade 2': a.atividade2 !== null ? atividadesMap[a.atividade2] : '',
+        'Data Cadastro': new Date(a.dataCadastro).toLocaleDateString('pt-BR')
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Alunos');
+      XLSX.writeFile(workbook, 'Alunos_Exportados.xlsx');
+      setMsg({ type: 'success', text: `Download iniciado com ${alunos.length} registros!` });
+    } catch (err) {
+      setMsg({ type: 'error', text: 'Erro ao gerar arquivo Excel.' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="import-export-container">
+      <h1 className="page-title">Importar / Exportar Dados</h1>
+
+      <div className="actions-grid">
+        <div className="action-card glass-panel">
+          <div className="card-icon">
+            <Upload size={32} color="var(--primary)" />
+          </div>
+          <h2>Importar Excel</h2>
+          <p>Faca o upload de uma planilha para cadastrar alunos em massa.</p>
+          <input
+            type="file"
+            accept=".xlsx, .xls"
+            ref={fileInputRef}
+            onChange={handleImport}
+            style={{ display: 'none' }}
+          />
+          <button className="btn btn-primary" onClick={() => fileInputRef.current.click()} disabled={loading}>
+            {loading ? 'Processando...' : 'Selecionar Arquivo'}
+          </button>
+        </div>
+
+        <div className="action-card glass-panel">
+          <div className="card-icon">
+            <Download size={32} color="#10b981" />
+          </div>
+          <h2>Exportar Excel</h2>
+          <p>Gere uma planilha com os dados dos alunos cadastrados.</p>
+          <button
+            className={`btn-filter ${showFilters ? 'active' : ''}`}
+            onClick={() => setShowFilters(!showFilters)}
+            style={{ marginBottom: '1rem' }}
+          >
+            <Filter size={20} /> Filtros para Exportacao
+          </button>
+
+          {showFilters && (
+            <div className="export-filters">
+              <div className="filter-group">
+                <label>Atividade</label>
+                <select value={filters.atividade} onChange={e => setFilters({ ...filters, atividade: e.target.value })}>
+                  <option value="">Todas</option>
+                  <option value="1">Futebol de campo</option>
+                  <option value="2">Futsal</option>
+                  <option value="3">Futsal contraturno</option>
+                  <option value="4">Judo</option>
+                  <option value="5">Karate</option>
+                  <option value="6">Jiu-jitsu</option>
+                  <option value="7">Ballet</option>
+                  <option value="8">Capoeira</option>
+                  <option value="9">Triathlon</option>
+                  <option value="10">Futebol Feminino</option>
+                  <option value="11">Orquestra de Musica</option>
+                  <option value="12">Creche</option>
+                </select>
+              </div>
+              <div className="filter-group">
+                <label>Idade Min / Max</label>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <input type="number" min="0" placeholder="Min" value={filters.idadeMin} onChange={e => setFilters({ ...filters, idadeMin: e.target.value })} style={{ width: '50%' }} />
+                  <input type="number" min="0" placeholder="Max" value={filters.idadeMax} onChange={e => setFilters({ ...filters, idadeMax: e.target.value })} style={{ width: '50%' }} />
+                </div>
+              </div>
+              <div className="filter-group">
+                <label>Data Cadastro (Inicio e Fim)</label>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <input type="date" value={filters.dataInicio} onChange={e => setFilters({ ...filters, dataInicio: e.target.value })} style={{ width: '50%' }} />
+                  <input type="date" value={filters.dataFim} onChange={e => setFilters({ ...filters, dataFim: e.target.value })} style={{ width: '50%' }} />
+                </div>
+              </div>
+            </div>
+          )}
+
+          <button
+            className="btn"
+            style={{ backgroundColor: '#10b981', color: 'white', marginTop: 'auto' }}
+            onClick={handleExport}
+            disabled={loading}
+          >
+            <FileSpreadsheet size={20} />
+            {loading ? 'Gerando...' : 'Baixar Planilha'}
+          </button>
+        </div>
+      </div>
+
+      {msg && (
+        <div className={`message-box glass-panel ${msg.type}`}>
+          <p>{msg.text}</p>
+          {msg.detalhes && msg.detalhes.length > 0 && (
+            <ul className="error-list">
+              {msg.detalhes.map((err, i) => <li key={i}>{err}</li>)}
+            </ul>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
