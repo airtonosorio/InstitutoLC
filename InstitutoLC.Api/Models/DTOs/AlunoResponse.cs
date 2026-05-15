@@ -7,7 +7,6 @@ public class AlunoResponse
     public int Id { get; set; }
     public string Nome { get; set; } = string.Empty;
     public DateTime DataNascimento { get; set; }
-    public string RG { get; set; } = string.Empty;
     public string CPF { get; set; } = string.Empty;
     public string Endereco { get; set; } = string.Empty;
     public string NumeroEndereco { get; set; } = string.Empty;
@@ -21,6 +20,8 @@ public class AlunoResponse
     public int NumeroPessoasCasa { get; set; }
     public string Contato1 { get; set; } = string.Empty;
     public string? Contato2 { get; set; }
+    public TipoAtividade? Atividade1 { get; set; }
+    public TipoAtividade? Atividade2 { get; set; }
     public AnamneseResponse? Anamnese { get; set; }
     public DateTime DataCadastro { get; set; }
     public DateTime? DataAtualizacao { get; set; }
