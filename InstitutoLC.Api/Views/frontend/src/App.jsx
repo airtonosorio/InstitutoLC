@@ -4,6 +4,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Cadastro from './pages/Cadastro';
 import Consulta from './pages/Consulta';
+import Turmas from './pages/Turmas';
 import ImportExport from './pages/ImportExport';
 
 const ProtectedRoute = ({ children }) => {
@@ -22,6 +23,7 @@ function App() {
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="cadastro" element={<Cadastro />} />
           <Route path="consulta" element={<Consulta />} />
+          <Route path="turmas" element={<Turmas />} />
           <Route path="import-export" element={<ImportExport />} />
         </Route>
       </Routes>

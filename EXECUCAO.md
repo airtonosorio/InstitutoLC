@@ -28,7 +28,7 @@ Neste modo, você vai rodar o backend (.NET) e o frontend (React/Vite) separadam
 ### Passo 2: Executando o Frontend (React)
 1. Abra **outro** terminal na pasta do frontend:
    ```bash
-   cd frontend
+   cd InstitutoLC.Api/Views/frontend
    ```
 2. Instale as dependências:
    ```bash
@@ -77,6 +77,5 @@ Com os contêineres rodando, acesse no seu navegador:
     ```
 *   **Para compilar o frontend para o backend manualmente (sem Docker):** 
     Se você quiser rodar só o `dotnet run` mas quer que ele mostre o frontend atualizado:
-    1. Entre na pasta `frontend` e rode `npm run build`.
-    2. Apague o conteúdo da pasta `InstitutoLC.Api/Views`.
-    3. Copie tudo da pasta `frontend/dist` para `InstitutoLC.Api/Views`.
+    1. Entre na pasta `InstitutoLC.Api/Views/frontend` e rode `npm run build`.
+       *(O Vite está configurado em `vite.config.js` para compilar e copiar automaticamente os arquivos de produção direto para a pasta `InstitutoLC.Api/Views`).*

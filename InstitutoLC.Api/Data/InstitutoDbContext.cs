@@ -12,6 +12,9 @@ public class InstitutoDbContext : DbContext
     public DbSet<Aluno> Alunos { get; set; }
     public DbSet<AnamneseAluno> AnamnesesAlunos { get; set; }
     public DbSet<Enfermidade> Enfermidades { get; set; }
+    public DbSet<Turma> Turmas { get; set; }
+    public DbSet<Horario> Horarios { get; set; }
+    public DbSet<AlunoTurma> AlunosTurmas { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -60,6 +63,33 @@ public class InstitutoDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Descricao).HasMaxLength(500);
+        });
+
+        modelBuilder.Entity<Horario>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+        });
+
+        modelBuilder.Entity<Turma>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasOne(t => t.Horario)
+                  .WithMany(h => h.Turmas)
+                  .HasForeignKey(t => t.HorarioId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<AlunoTurma>(entity =>
+        {
+            entity.HasKey(at => new { at.AlunoId, at.TurmaId });
+            
+            entity.HasOne(at => at.Aluno)
+                  .WithMany(a => a.AlunosTurmas)
+                  .HasForeignKey(at => at.AlunoId);
+
+            entity.HasOne(at => at.Turma)
+                  .WithMany(t => t.AlunosTurma)
+                  .HasForeignKey(at => at.TurmaId);
         });
     }
 }

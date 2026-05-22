@@ -29,6 +29,7 @@ public class AlunosController : ControllerBase
     public async Task<ActionResult<IEnumerable<AlunoResponse>>> GetAlunos([FromQuery] TipoAtividade? atividade)
     {
         var query = _context.Alunos
+            .Include(a => a.AlunosTurmas)
             .Include(a => a.Anamnese)
                 .ThenInclude(an => an!.Enfermidades)
             .AsQueryable();
@@ -51,6 +52,7 @@ public class AlunosController : ControllerBase
     public async Task<ActionResult<AlunoResponse>> GetAluno(int id)
     {
         var aluno = await _context.Alunos
+            .Include(a => a.AlunosTurmas)
             .Include(a => a.Anamnese)
                 .ThenInclude(an => an!.Enfermidades)
             .FirstOrDefaultAsync(a => a.Id == id);
@@ -80,11 +82,24 @@ public class AlunosController : ControllerBase
             Nome = request.Nome,
             DataNascimento = request.DataNascimento,
             CPF = request.CPF,
+            RG = request.RG,
+            Genero = request.Genero,
+            CorRaca = request.CorRaca,
+            NomeResponsavel = request.NomeResponsavel,
+            NomePai = request.NomePai,
+            NomeMae = request.NomeMae,
+            RecebeBeneficio = request.RecebeBeneficio,
+            RendaFamiliar = request.RendaFamiliar,
             Endereco = request.Endereco,
             NumeroEndereco = request.NumeroEndereco,
             Bairro = request.Bairro,
             Municipio = request.Municipio,
             Estado = request.Estado,
+            CEP = request.CEP,
+            ZonaMoradia = request.ZonaMoradia,
+            TipoMoradia = request.TipoMoradia,
+            ResponsavelTransporte = request.ResponsavelTransporte,
+            MeioTransporte = request.MeioTransporte,
             Escola = request.Escola,
             TipoEscola = request.TipoEscola,
             Serie = request.Serie,
@@ -131,6 +146,10 @@ public class AlunosController : ControllerBase
             .Reference(a => a.Anamnese)
             .LoadAsync();
 
+        await _context.Entry(aluno)
+            .Collection(a => a.AlunosTurmas)
+            .LoadAsync();
+
         if (aluno.Anamnese != null)
         {
             await _context.Entry(aluno.Anamnese)
@@ -148,6 +167,7 @@ public class AlunosController : ControllerBase
     public async Task<ActionResult<AlunoResponse>> UpdateAluno(int id, AtualizarAlunoRequest request)
     {
         var aluno = await _context.Alunos
+            .Include(a => a.AlunosTurmas)
             .Include(a => a.Anamnese)
                 .ThenInclude(an => an!.Enfermidades)
             .FirstOrDefaultAsync(a => a.Id == id);
@@ -174,6 +194,30 @@ public class AlunosController : ControllerBase
         if (request.DataNascimento.HasValue)
             aluno.DataNascimento = request.DataNascimento.Value;
 
+        if (!string.IsNullOrWhiteSpace(request.RG))
+            aluno.RG = request.RG;
+
+        if (request.Genero.HasValue)
+            aluno.Genero = request.Genero.Value;
+
+        if (request.CorRaca.HasValue)
+            aluno.CorRaca = request.CorRaca.Value;
+
+        if (!string.IsNullOrWhiteSpace(request.NomeResponsavel))
+            aluno.NomeResponsavel = request.NomeResponsavel;
+
+        if (request.NomePai != null)
+            aluno.NomePai = request.NomePai;
+
+        if (request.NomeMae != null)
+            aluno.NomeMae = request.NomeMae;
+
+        if (request.RecebeBeneficio.HasValue)
+            aluno.RecebeBeneficio = request.RecebeBeneficio.Value;
+
+        if (request.RendaFamiliar != null)
+            aluno.RendaFamiliar = request.RendaFamiliar;
+
         if (!string.IsNullOrWhiteSpace(request.Endereco))
             aluno.Endereco = request.Endereco;
 
@@ -188,6 +232,21 @@ public class AlunosController : ControllerBase
 
         if (!string.IsNullOrWhiteSpace(request.Estado))
             aluno.Estado = request.Estado;
+
+        if (!string.IsNullOrWhiteSpace(request.CEP))
+            aluno.CEP = request.CEP;
+
+        if (request.ZonaMoradia.HasValue)
+            aluno.ZonaMoradia = request.ZonaMoradia.Value;
+
+        if (request.TipoMoradia.HasValue)
+            aluno.TipoMoradia = request.TipoMoradia.Value;
+
+        if (request.ResponsavelTransporte.HasValue)
+            aluno.ResponsavelTransporte = request.ResponsavelTransporte.Value;
+
+        if (request.MeioTransporte.HasValue)
+            aluno.MeioTransporte = request.MeioTransporte.Value;
 
         if (!string.IsNullOrWhiteSpace(request.Escola))
             aluno.Escola = request.Escola;
@@ -260,6 +319,10 @@ public class AlunosController : ControllerBase
         // Recarregar com includes para garantir que os dados estão atualizados
         await _context.Entry(aluno)
             .Reference(a => a.Anamnese)
+            .LoadAsync();
+
+        await _context.Entry(aluno)
+            .Collection(a => a.AlunosTurmas)
             .LoadAsync();
 
         if (aluno.Anamnese != null)
@@ -609,11 +672,24 @@ public class AlunosController : ControllerBase
             Nome = aluno.Nome,
             DataNascimento = aluno.DataNascimento,
             CPF = aluno.CPF,
+            RG = aluno.RG,
+            Genero = aluno.Genero,
+            CorRaca = aluno.CorRaca,
+            NomeResponsavel = aluno.NomeResponsavel,
+            NomePai = aluno.NomePai,
+            NomeMae = aluno.NomeMae,
+            RecebeBeneficio = aluno.RecebeBeneficio,
+            RendaFamiliar = aluno.RendaFamiliar,
             Endereco = aluno.Endereco,
             NumeroEndereco = aluno.NumeroEndereco,
             Bairro = aluno.Bairro,
             Municipio = aluno.Municipio,
             Estado = aluno.Estado,
+            CEP = aluno.CEP,
+            ZonaMoradia = aluno.ZonaMoradia,
+            TipoMoradia = aluno.TipoMoradia,
+            ResponsavelTransporte = aluno.ResponsavelTransporte,
+            MeioTransporte = aluno.MeioTransporte,
             Escola = aluno.Escola,
             TipoEscola = aluno.TipoEscola,
             Serie = aluno.Serie,
@@ -623,6 +699,7 @@ public class AlunosController : ControllerBase
             Contato2 = aluno.Contato2,
             Atividade1 = aluno.Atividade1,
             Atividade2 = aluno.Atividade2,
+            Enturmado = aluno.AlunosTurmas != null && aluno.AlunosTurmas.Any(),
             DataCadastro = aluno.DataCadastro,
             DataAtualizacao = aluno.DataAtualizacao,
             Anamnese = aluno.Anamnese == null ? null : new AnamneseResponse

@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, UserPlus, Users, FileDown, LogOut } from 'lucide-react';
-import logoImg from '../assets/image.png';
 import './Layout.css';
 
 export default function Layout() {
@@ -17,7 +16,7 @@ export default function Layout() {
     <div className="layout">
       {/* HEADER SUPERIOR (Semelhante ao Portal FB UNI da imagem) */}
       <header className="top-header">
-        <h1>Portal Instituto LC</h1>
+        <h1>Instituto Lucimário Caitano</h1>
         <button className="global-logout-btn" onClick={() => setShowLogoutModal(true)}>
           <LogOut size={20} /> Sair
         </button>
@@ -39,21 +38,21 @@ export default function Layout() {
         )}
 
         <aside className="sidebar">
-          <div className="sidebar-header">
-            <img src={logoImg} alt="Logo" className="sidebar-logo" />
-            <h2>Instituto LC</h2>
-          </div>
           <nav className="sidebar-nav">
-            <NavLink to="/dashboard" className={({isActive}) => isActive ? 'nav-item active' : 'nav-item'}>
+            <NavLink to="/dashboard" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
               <LayoutDashboard size={20} /> Dashboard
             </NavLink>
-            <NavLink to="/cadastro" className={({isActive}) => isActive ? 'nav-item active' : 'nav-item'}>
+            <NavLink to="/cadastro" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
               <UserPlus size={20} /> Cadastro
             </NavLink>
-            <NavLink to="/consulta" className={({isActive}) => isActive ? 'nav-item active' : 'nav-item'}>
+            <NavLink to="/consulta" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
               <Users size={20} /> Consulta
             </NavLink>
-            <NavLink to="/import-export" className={({isActive}) => isActive ? 'nav-item active' : 'nav-item'}>
+            <NavLink to="/turmas" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
+              <Users size={20} /> Turmas
+            </NavLink>
+
+            <NavLink to="/import-export" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
               <FileDown size={20} /> Exportar / Excel
             </NavLink>
           </nav>

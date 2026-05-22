@@ -135,7 +135,7 @@ dotnet tool install --global dotnet-ef
 dotnet ef database update
 ```
 
-### Passo 4: Executar a Aplicação
+### Passo 4: Executar a Aplicação (Backend)
 
 ```bash
 dotnet run
@@ -148,6 +148,27 @@ info: Microsoft.Hosting.Lifetime[14]
       Now listening on: https://localhost:5001
 ```
 
+### Passo 5: Executar o Frontend (React/Vite)
+
+Para rodar o frontend em modo de desenvolvimento (com hot-reload):
+
+1. **Abra outro terminal** e navegue até a pasta do frontend:
+   ```bash
+   cd InstitutoLC.Api/Views/frontend
+   ```
+
+2. **Instale as dependências** (caso ainda não tenha feito):
+   ```bash
+   npm install
+   ```
+
+3. **Inicie o servidor de desenvolvimento** do Vite:
+   ```bash
+   npm run dev
+   ```
+
+O frontend ficará disponível em `http://localhost:5173`. Ele se comunicará automaticamente com a API local.
+
 ---
 
 ## Acessando o Sistema
@@ -156,44 +177,44 @@ info: Microsoft.Hosting.Lifetime[14]
 
 Após a aplicação estar rodando, acesse:
 
-#### Com Docker:
+#### Com Docker (Produção):
 ```
 http://localhost:8080
 ```
 
-#### Sem Docker:
+#### Sem Docker (Desenvolvimento):
 ```
-http://localhost:5000
+http://localhost:5173  (Frontend em React/Vite - Recomendado)
 ou
-https://localhost:5001
+http://localhost:5000  (Servido pelo backend .NET se compilado)
 ```
 
-### 📄 Páginas Disponíveis
+### 📄 Rotas do Sistema (Frontend React)
 
-1. **Página Principal (Home):**
-   - URL: `http://localhost:8080/Views/home/home.html`
-   - Funcionalidades:
-     - Dashboard com gráficos
-     - Adicionar aluno
-     - Adicionar alunos em massa
-     - Visualizar estatísticas
+Quando a aplicação estiver rodando:
 
-2. **Lista de Alunos:**
-   - URL: `http://localhost:8080/Views/home/lista.html`
-   - Funcionalidades:
-     - Listar todos os alunos
-     - Editar aluno
-     - Deletar aluno
-     - Adicionar novo aluno
+1. **Dashboard:**
+   - Rota: `/dashboard` (ex: `http://localhost:5173/dashboard`)
+   - Funcionalidades: Dashboard interativo com gráficos e contadores estatísticos dos alunos.
 
-3. **Importar Excel:**
-   - URL: `http://localhost:8080/Views/home/import.html`
-   - Funcionalidades:
-     - Importar alunos via Excel (importação atômica - tudo ou nada)
-     - Exportar alunos para CSV
+2. **Cadastro:**
+   - Rota: `/cadastro` (ex: `http://localhost:5173/cadastro`)
+   - Funcionalidades: Formulário completo com layout responsivo e glassmorphism para cadastro de alunos.
 
-4. **Login (se implementado):**
-   - URL: `http://localhost:8080/Views/login/login.html`
+3. **Consulta:**
+   - Rota: `/consulta` (ex: `http://localhost:5173/consulta`)
+   - Funcionalidades: Busca, filtros avançados, visualização de detalhes, edição e remoção de alunos.
+
+4. **Turmas:**
+   - Rota: `/turmas` (ex: `http://localhost:5173/turmas`)
+   - Funcionalidades: Gerenciamento de turmas, controle de vagas, faixas etárias e visualização de alunos matriculados.
+
+5. **Exportar / Excel:**
+   - Rota: `/import-export` (ex: `http://localhost:5173/import-export`)
+   - Funcionalidades: Importação atômica em lote usando arquivos Excel (.xlsx) e exportação de dados.
+
+6. **Login:**
+   - Rota: `/login` (ex: `http://localhost:5173/login`)
 
 ### 🔧 Acessar a API (Swagger)
 
@@ -292,9 +313,9 @@ docker-compose up -d
 
 **Solução:**
 1. Verifique se está acessando a URL correta:
-   - ✅ `http://localhost:8080/Views/home/home.html`
-   - ❌ `http://localhost:8080/home.html` (incorreto)
-2. Verifique se os arquivos estão na pasta `Views`
+   - ✅ `http://localhost:8080/` ou `http://localhost:8080/dashboard`
+   - ❌ `http://localhost:8080/Views/home/home.html` (caminho antigo da versão estática)
+2. Certifique-se de que compilou o frontend (rodando `npm run build` na pasta `InstitutoLC.Api/Views/frontend`) para que o Vite gere a Build direto na pasta `Views`.
 3. Verifique os logs do container: `docker-compose logs api`
 
 ### ❌ Problema: Erro "Cannot connect to database"
@@ -367,21 +388,21 @@ dotnet ef migrations add NomeDaMigration
 
 ### Com Docker (porta 8080):
 ```
-http://localhost:8080/                          → Página inicial (se configurada)
-http://localhost:8080/Views/home/home.html       → Dashboard
-http://localhost:8080/Views/home/lista.html     → Lista de alunos
-http://localhost:8080/Views/home/import.html    → Importar Excel
-http://localhost:8080/Views/login/login.html    → Login
-http://localhost:8080/swagger                   → Documentação da API
+http://localhost:8080/                          → Portal do Instituto (React App)
+http://localhost:8080/dashboard                 → Dashboard
+http://localhost:8080/cadastro                  → Cadastro de alunos
+http://localhost:8080/consulta                  → Consulta e edição de alunos
+http://localhost:8080/turmas                    → Gerenciamento de turmas
+http://localhost:8080/import-export             → Importar / Exportar Excel
+http://localhost:8080/swagger                   → Documentação da API (Swagger)
 http://localhost:8080/api/alunos                → Endpoint da API
 ```
 
-### Sem Docker (porta 5000/5001):
+### Sem Docker (porta 5173 para Frontend / 5000 para Backend):
 ```
-http://localhost:5000/Views/home/home.html       → Dashboard
-http://localhost:5000/Views/home/lista.html     → Lista de alunos
-http://localhost:5000/Views/home/import.html    → Importar Excel
-http://localhost:5000/swagger                   → Documentação da API
+http://localhost:5173/                          → Servidor de Desenvolvimento do Frontend (Vite)
+http://localhost:5000/                          → Servidor de Produção do Backend (quando compilado)
+http://localhost:5000/swagger                   → Documentação da API (Swagger)
 http://localhost:5000/api/alunos                → Endpoint da API
 ```
 
