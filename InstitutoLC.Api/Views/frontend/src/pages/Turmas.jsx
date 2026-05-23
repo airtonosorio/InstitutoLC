@@ -3,20 +3,6 @@ import api from '../api';
 import './Cadastro.css'; // reaproveitando os estilos de formulários e grid
 import './Turmas.css';
 
-const atividadesMap = {
-  1: 'Futebol de campo',
-  2: 'Futsal',
-  3: 'Futsal contraturno',
-  4: 'Judô',
-  5: 'Karatê',
-  6: 'Jiu-jitsu',
-  7: 'Ballet',
-  8: 'Capoeira',
-  9: 'Triathlon',
-  10: 'Futebol Feminino',
-  11: 'Orquestra de Música',
-  12: 'Creche'
-};
 
 const getAge = (dobString) => {
   if (!dobString) return 0;
@@ -52,8 +38,15 @@ export default function Turmas() {
   const [allAlunos, setAllAlunos] = useState([]);
   const [matriculados, setMatriculados] = useState([]);
   const [savingAlunos, setSavingAlunos] = useState(false);
+  const [atividadesList, setAtividadesList] = useState([]);
+
+  const atividadesMap = {};
+  atividadesList.forEach(a => {
+    atividadesMap[a.id] = a.nome;
+  });
 
   const [formData, setFormData] = useState(defaultFormData);
+  const [editingTurmaId, setEditingTurmaId] = useState(null);
 
   useEffect(() => {
     fetchDados();
@@ -62,8 +55,20 @@ export default function Turmas() {
   const fetchDados = async () => {
     try {
       setLoading(true);
-      const res = await api.get('/turmas');
-      setTurmas(res.data);
+      const [resTurmas, resAtiv] = await Promise.all([
+        api.get('/turmas'),
+        api.get('/Atividades')
+      ]);
+      setTurmas(resTurmas.data);
+      setAtividadesList(resAtiv.data);
+      
+      // Defina a primeira atividade como padrão caso seja a primeira carga ou padrão
+      if (resAtiv.data.length > 0) {
+        setFormData(prev => ({
+          ...prev,
+          atividade: prev.atividade === 1 ? resAtiv.data[0].id : prev.atividade
+        }));
+      }
     } catch (err) {
       console.error(err);
       alert('Erro ao buscar turmas.');
@@ -72,12 +77,67 @@ export default function Turmas() {
     }
   };
 
+  const handleToggleForm = () => {
+    if (showForm) {
+      setFormData(defaultFormData);
+      setEditingTurmaId(null);
+      setShowForm(false);
+    } else {
+      setFormData(defaultFormData);
+      setEditingTurmaId(null);
+      setShowForm(true);
+    }
+  };
+
+  const startEdit = (turma) => {
+    const dateInicio = turma.dataInicio ? turma.dataInicio.split('T')[0] : '';
+    const dateFim = turma.dataFim ? turma.dataFim.split('T')[0] : '';
+    
+    setFormData({
+      nome: turma.nome,
+      limiteAlunos: turma.limiteAlunos,
+      atividade: turma.atividade,
+      dataInicio: dateInicio,
+      dataFim: dateFim,
+      statusAtiva: turma.statusAtiva,
+      idadeMinima: turma.idadeMinima,
+      idadeMaxima: turma.idadeMaxima,
+      horaInicio: turma.horario?.horaInicio || '',
+      horaFim: turma.horario?.horaFim || '',
+      horarioId: turma.horarioId
+    });
+    setEditingTurmaId(turma.id);
+    setShowForm(true);
+  };
+
+  const handleUpdate = async (e) => {
+    e.preventDefault();
+    try {
+      await api.put(`/turmas/${editingTurmaId}`, formData);
+      alert('Turma atualizada com sucesso!');
+      setFormData({
+        ...defaultFormData,
+        atividade: atividadesList[0]?.id || 1
+      });
+      setEditingTurmaId(null);
+      setShowForm(false);
+      fetchDados();
+    } catch (err) {
+      console.error(err);
+      alert('Erro ao atualizar turma.');
+    }
+  };
+
   const handleCreate = async (e) => {
     e.preventDefault();
     try {
       await api.post('/turmas', formData);
       alert('Turma criada com sucesso!');
-      setFormData(defaultFormData);
+      setFormData({
+        ...defaultFormData,
+        atividade: atividadesList[0]?.id || 1
+      });
+      setEditingTurmaId(null);
       setShowForm(false);
       fetchDados();
     } catch (err) {
@@ -173,15 +233,15 @@ export default function Turmas() {
     <div className="turmas-container">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
         <h1 className="page-title" style={{ margin: 0 }}>Gerenciamento de Turmas</h1>
-        <button className="btn btn-primary" onClick={() => setShowForm(!showForm)}>
+        <button className="btn btn-primary" onClick={handleToggleForm}>
           {showForm ? 'Voltar' : 'Criar Turma'}
         </button>
       </div>
 
       {showForm ? (
-        <form className="glass-panel form-cadastro" onSubmit={handleCreate}>
+        <form className="glass-panel form-cadastro" onSubmit={editingTurmaId ? handleUpdate : handleCreate}>
           <div className="form-section" style={{ borderBottom: 'none', marginBottom: 0, paddingBottom: 0 }}>
-            <h3>Dados da Turma</h3>
+            <h3>{editingTurmaId ? 'Editar Turma' : 'Dados da Turma'}</h3>
             <div className="grid-3">
               <div className="form-group" style={{ gridColumn: 'span 2' }}>
                 <label>Nome da Turma *</label>
@@ -204,8 +264,8 @@ export default function Turmas() {
               <div className="form-group">
                 <label>Atividade *</label>
                 <select value={formData.atividade} onChange={e => setFormData({...formData, atividade: parseInt(e.target.value)})}>
-                  {Object.entries(atividadesMap).map(([id, nome]) => (
-                    <option key={id} value={id}>{nome}</option>
+                  {atividadesList.map(ativ => (
+                    <option key={ativ.id} value={ativ.id}>{ativ.nome}</option>
                   ))}
                 </select>
               </div>
@@ -284,7 +344,7 @@ export default function Turmas() {
 
           <div className="form-actions" style={{ justifyContent: 'center', marginTop: '2rem' }}>
             <button type="submit" className="btn btn-primary" style={{ padding: '0.5rem 2rem', fontSize: '1rem', width: 'auto', display: 'inline-block' }}>
-              Salvar Turma
+              {editingTurmaId ? 'Salvar Alterações' : 'Salvar Turma'}
             </button>
           </div>
         </form>
@@ -305,6 +365,9 @@ export default function Turmas() {
                 <p><strong>Vagas:</strong> {t.totalAlunos} / {t.limiteAlunos}</p>
               </div>
               <div className="turma-actions">
+                <button className="btn-icon btn-edit" onClick={(e) => { e.stopPropagation(); startEdit(t); }}>
+                  Editar
+                </button>
                 <button className="btn-icon btn-danger" onClick={(e) => { e.stopPropagation(); handleDelete(t.id); }}>
                   Excluir
                 </button>

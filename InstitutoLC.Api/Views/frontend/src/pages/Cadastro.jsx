@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import api from '../api';
 import './Cadastro.css';
 
@@ -51,26 +51,11 @@ const applyPhoneMask = (val) => {
   return v;
 };
 
-const ATIVIDADES = [
-  { id: 1, nome: "Futebol de campo (06 a 17 anos)", minIdade: 6, maxIdade: 17 },
-  { id: 2, nome: "Futsal (06 a 17 anos)", minIdade: 6, maxIdade: 17 },
-  { id: 3, nome: "Futsal contraturno (06 a 17 anos)", minIdade: 6, maxIdade: 17 },
-  { id: 4, nome: "Judô (10 a 17 anos)", minIdade: 10, maxIdade: 17 },
-  { id: 5, nome: "Karatê (05 a 17 anos)", minIdade: 5, maxIdade: 17 },
-  { id: 6, nome: "Jiu-jitsu (05 a 17 anos)", minIdade: 5, maxIdade: 17 },
-  { id: 7, nome: "Ballet (05 a 17 anos)", minIdade: 5, maxIdade: 17 },
-  { id: 8, nome: "Capoeira (14 a 17 anos)", minIdade: 14, maxIdade: 17 },
-  { id: 9, nome: "Triathlon (08 a 17 anos)", minIdade: 8, maxIdade: 17 },
-  { id: 10, nome: "Futebol Feminino (06 a 17 anos)", minIdade: 6, maxIdade: 17 },
-  { id: 11, nome: "Orquestra de Música (08 a 17 anos)", minIdade: 8, maxIdade: 17 },
-  { id: 12, nome: "Creche (10 meses a 3 anos)", minIdade: 0.83, maxIdade: 3 }
-];
-
-const filterAtividadesPorIdade = (idade) => {
-  if (!idade) return [];
+const filterAtividadesPorIdade = (idade, list) => {
+  if (!idade || !list) return [];
   const { years, totalMonths } = idade;
-  return ATIVIDADES.filter(ativ => {
-    if (ativ.id === 12) { // Creche (10 meses a 3 anos)
+  return list.filter(ativ => {
+    if (ativ.id === 12 || ativ.nome.toLowerCase().includes('creche')) { // Creche (10 meses a 3 anos)
       return totalMonths >= 10 && years <= 3;
     } else {
       return years >= ativ.minIdade && years <= ativ.maxIdade;
@@ -116,6 +101,13 @@ export default function Cadastro() {
   const [msg, setMsg] = useState('');
   const [isError, setIsError] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [atividadesList, setAtividadesList] = useState([]);
+
+  useEffect(() => {
+    api.get('/Atividades')
+      .then(res => setAtividadesList(res.data))
+      .catch(err => console.error('Erro ao buscar atividades:', err));
+  }, []);
 
   const [anamneseData, setAnamneseData] = useState({
     bronquiteAsma: false,
@@ -630,7 +622,7 @@ export default function Cadastro() {
               <label>Atividade Principal *</label>
               <select name="atividade1" value={formData.atividade1} onChange={handleChange} required disabled={!idade}>
                 <option value="">{idade ? 'Selecione uma atividade...' : 'Preencha a data de nascimento primeiro'}</option>
-                {idade && filterAtividadesPorIdade(idade).map(ativ => (
+                {idade && filterAtividadesPorIdade(idade, atividadesList).map(ativ => (
                   <option key={ativ.id} value={ativ.id}>{ativ.nome}</option>
                 ))}
               </select>
@@ -639,7 +631,7 @@ export default function Cadastro() {
               <label>Atividade Secundária (Opcional)</label>
               <select name="atividade2" value={formData.atividade2} onChange={handleChange} disabled={!idade || !formData.atividade1}>
                 <option value="">{idade ? 'Selecione uma atividade (opcional)...' : 'Preencha a data de nascimento primeiro'}</option>
-                {idade && filterAtividadesPorIdade(idade)
+                {idade && filterAtividadesPorIdade(idade, atividadesList)
                   .filter(ativ => ativ.id !== parseInt(formData.atividade1))
                   .map(ativ => (
                     <option key={ativ.id} value={ativ.id}>{ativ.nome}</option>

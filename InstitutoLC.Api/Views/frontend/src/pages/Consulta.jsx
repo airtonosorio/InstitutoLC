@@ -4,21 +4,6 @@ import { format, differenceInYears, parseISO } from 'date-fns';
 import api from '../api';
 import './Consulta.css';
 
-const atividadesMap = {
-  1: 'Futebol de campo',
-  2: 'Futsal',
-  3: 'Futsal contraturno',
-  4: 'Judô',
-  5: 'Karatê',
-  6: 'Jiu-jitsu',
-  7: 'Ballet',
-  8: 'Capoeira',
-  9: 'Triathlon',
-  10: 'Futebol Feminino',
-  11: 'Orquestra de Música',
-  12: 'Creche'
-};
-
 const generosMap = {
   1: 'Masculino',
   2: 'Feminino',
@@ -74,32 +59,18 @@ const turnosMap = {
   3: 'Integral'
 };
 
-const ATIVIDADES = [
-  { id: 1, nome: "Futebol de campo (06 a 17 anos)", minIdade: 6, maxIdade: 17 },
-  { id: 2, nome: "Futsal (06 a 17 anos)", minIdade: 6, maxIdade: 17 },
-  { id: 3, nome: "Futsal contraturno (06 a 17 anos)", minIdade: 6, maxIdade: 17 },
-  { id: 4, nome: "Judô (10 a 17 anos)", minIdade: 10, maxIdade: 17 },
-  { id: 5, nome: "Karatê (05 a 17 anos)", minIdade: 5, maxIdade: 17 },
-  { id: 6, nome: "Jiu-jitsu (05 a 17 anos)", minIdade: 5, maxIdade: 17 },
-  { id: 7, nome: "Ballet (05 a 17 anos)", minIdade: 5, maxIdade: 17 },
-  { id: 8, nome: "Capoeira (14 a 17 anos)", minIdade: 14, maxIdade: 17 },
-  { id: 9, nome: "Triathlon (08 a 17 anos)", minIdade: 8, maxIdade: 17 },
-  { id: 10, nome: "Futebol Feminino (06 a 17 anos)", minIdade: 6, maxIdade: 17 },
-  { id: 11, nome: "Orquestra de Música (08 a 17 anos)", minIdade: 8, maxIdade: 17 },
-  { id: 12, nome: "Creche (10 meses a 3 anos)", minIdade: 0.83, maxIdade: 3 }
-];
-
-const filterAtividadesPorIdade = (idade) => {
-  if (!idade) return [];
+const filterAtividadesPorIdade = (idade, list) => {
+  if (!idade || !list) return [];
   const { years, totalMonths } = idade;
-  return ATIVIDADES.filter(ativ => {
-    if (ativ.id === 12) { // Creche (10 meses a 3 anos)
+  return list.filter(ativ => {
+    if (ativ.id === 12 || ativ.nome.toLowerCase().includes('creche')) { // Creche (10 meses a 3 anos)
       return totalMonths >= 10 && years <= 3;
     } else {
       return years >= ativ.minIdade && years <= ativ.maxIdade;
     }
   });
 };
+
 
 const applyCpfMask = (val) => {
   let v = val.replace(/\D/g, '');
@@ -154,6 +125,12 @@ export default function Consulta() {
   const [alunos, setAlunos] = useState([]);
   const [filtered, setFiltered] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [atividadesList, setAtividadesList] = useState([]);
+
+  const atividadesMap = {};
+  atividadesList.forEach(a => {
+    atividadesMap[a.id] = a.nome;
+  });
 
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(false);
@@ -197,13 +174,15 @@ export default function Consulta() {
   const fetchAlunosETurmas = async () => {
     setLoading(true);
     try {
-      const [resAlunos, resTurmas] = await Promise.all([
+      const [resAlunos, resTurmas, resAtiv] = await Promise.all([
         api.get('/Alunos'),
-        api.get('/turmas')
+        api.get('/turmas'),
+        api.get('/Atividades')
       ]);
       setAlunos(resAlunos.data);
       setFiltered(resAlunos.data);
       setTodasTurmas(resTurmas.data);
+      setAtividadesList(resAtiv.data);
     } catch (err) {
       console.error("Erro ao buscar dados", err);
     } finally {
@@ -1041,7 +1020,7 @@ export default function Consulta() {
                       <label>Atividade Principal *</label>
                       <select name="atividade1" value={editForm.atividade1} onChange={handleEditChange} required disabled={!editIdade}>
                         <option value="">{editIdade ? 'Selecione uma atividade...' : 'Preencha a data de nascimento primeiro'}</option>
-                        {editIdade && filterAtividadesPorIdade(editIdade).map(ativ => (
+                        {editIdade && filterAtividadesPorIdade(editIdade, atividadesList).map(ativ => (
                           <option key={ativ.id} value={ativ.id}>{ativ.nome}</option>
                         ))}
                       </select>
@@ -1050,7 +1029,7 @@ export default function Consulta() {
                       <label>Atividade Secundária (Opcional)</label>
                       <select name="atividade2" value={editForm.atividade2} onChange={handleEditChange} disabled={!editIdade || !editForm.atividade1}>
                         <option value="">{editIdade ? 'Selecione uma atividade (opcional)...' : 'Preencha a data de nascimento primeiro'}</option>
-                        {editIdade && filterAtividadesPorIdade(editIdade)
+                        {editIdade && filterAtividadesPorIdade(editIdade, atividadesList)
                           .filter(ativ => ativ.id !== parseInt(editForm.atividade1))
                           .map(ativ => (
                             <option key={ativ.id} value={ativ.id}>{ativ.nome}</option>

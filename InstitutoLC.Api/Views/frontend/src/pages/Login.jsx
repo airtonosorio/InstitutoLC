@@ -18,7 +18,8 @@ export default function Login() {
 
     try {
       const res = await api.post('/Auth/login', { username, password });
-      localStorage.setItem('token', res.data.token);
+      localStorage.setItem('isAuthenticated', 'true');
+      localStorage.setItem('username', res.data.username);
       navigate('/dashboard');
     } catch (err) {
       setErrorMsg(err.response?.data?.message || 'Usuário ou senha incorretos.');

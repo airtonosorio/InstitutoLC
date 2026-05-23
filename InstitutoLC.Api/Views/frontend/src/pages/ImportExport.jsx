@@ -1,17 +1,9 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 import { Upload, Download, FileSpreadsheet, Filter } from 'lucide-react';
 import { differenceInYears, parseISO } from 'date-fns';
 import api from '../api';
 import './ImportExport.css';
-
-const atividadesMap = {
-  0: 'Futebol',
-  1: 'Ballet',
-  2: 'Música',
-  3: 'Natação',
-  4: 'Reforço Escolar'
-};
 
 const turnosMap = {
   0: 'Matutino',
@@ -24,6 +16,18 @@ export default function ImportExport() {
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState(null);
   const fileInputRef = useRef(null);
+  const [atividades, setAtividades] = useState([]);
+
+  useEffect(() => {
+    api.get('/Atividades')
+      .then(res => setAtividades(res.data))
+      .catch(err => console.error('Erro ao buscar atividades:', err));
+  }, []);
+
+  const atividadesMap = {};
+  atividades.forEach(a => {
+    atividadesMap[a.id] = a.nome;
+  });
 
   // Filtros de Exportação
   const [showFilters, setShowFilters] = useState(false);
@@ -135,7 +139,7 @@ export default function ImportExport() {
 
   return (
     <div className="import-export-container">
-      <h1 className="page-title">Importar / Exportar Dados</h1>
+      <h1 className="page-title">Exportação/ Importação</h1>
 
       <div className="actions-grid">
         {/* Card Importação */}
@@ -157,6 +161,7 @@ export default function ImportExport() {
             className="btn btn-primary" 
             onClick={() => fileInputRef.current.click()}
             disabled={loading}
+            style={{ marginTop: 'auto' }}
           >
             {loading ? 'Processando...' : 'Selecionar Arquivo'}
           </button>
@@ -184,11 +189,9 @@ export default function ImportExport() {
                 <label>Atividade</label>
                 <select value={filters.atividade} onChange={e => setFilters({...filters, atividade: e.target.value})}>
                   <option value="">Todas</option>
-                  <option value="0">Futebol</option>
-                  <option value="1">Ballet</option>
-                  <option value="2">Música</option>
-                  <option value="3">Natação</option>
-                  <option value="4">Reforço Escolar</option>
+                  {atividades.map(ativ => (
+                    <option key={ativ.id} value={ativ.id}>{ativ.nome.replace(/\s*\([^)]*\)/g, '')}</option>
+                  ))}
                 </select>
               </div>
               <div className="filter-group">

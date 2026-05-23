@@ -5,6 +5,8 @@ using Microsoft.Extensions.FileProviders;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using Microsoft.AspNetCore.RateLimiting;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -40,7 +42,8 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 // Configurar Autenticação JWT
-var key = Encoding.ASCII.GetBytes("ChaveSecretaMuitoLongaEComplicadaInstitutoLC2026!!");
+var jwtSecret = builder.Configuration["Jwt:Secret"] ?? "ChaveSecretaMuitoLongaEComplicadaInstitutoLC2026!!";
+var key = Encoding.ASCII.GetBytes(jwtSecret);
 builder.Services.AddAuthentication(x =>
 {
     x.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -54,8 +57,20 @@ builder.Services.AddAuthentication(x =>
     {
         ValidateIssuerSigningKey = true,
         IssuerSigningKey = new SymmetricSecurityKey(key),
-        ValidateIssuer = false,
-        ValidateAudience = false
+        ValidateIssuer = true,
+        ValidIssuer = builder.Configuration["Jwt:Issuer"] ?? "InstitutoLC.Api",
+        ValidateAudience = true,
+        ValidAudience = builder.Configuration["Jwt:Audience"] ?? "InstitutoLC.Frontend",
+        ValidateLifetime = true,
+        ClockSkew = TimeSpan.Zero
+    };
+    x.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            context.Token = context.Request.Cookies["jwt"];
+            return Task.CompletedTask;
+        }
     };
 });
 
@@ -64,9 +79,33 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
     {
-        policy.AllowAnyOrigin()
+        var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() 
+            ?? new[] { "http://localhost:5173", "http://localhost:8080" };
+
+        policy.WithOrigins(allowedOrigins)
               .AllowAnyMethod()
-              .AllowAnyHeader();
+              .AllowAnyHeader()
+              .AllowCredentials(); // Permitir cookies HttpOnly
+    });
+});
+
+// Configurar Rate Limiting nativo do .NET 8
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    options.AddFixedWindowLimiter("auth-limit", opt =>
+    {
+        opt.PermitLimit = 5; // Limitar a 5 requisições de login/senha
+        opt.Window = TimeSpan.FromMinutes(1);
+        opt.QueueLimit = 0;
+    });
+
+    options.AddFixedWindowLimiter("import-limit", opt =>
+    {
+        opt.PermitLimit = 3; // Limitar a 3 importações
+        opt.Window = TimeSpan.FromMinutes(1);
+        opt.QueueLimit = 0;
     });
 });
 
@@ -113,6 +152,47 @@ using (var scope = app.Services.CreateScope())
                 // Migrate() cria o banco automaticamente se não existir
                 db.Database.Migrate();
                 Console.WriteLine("Migrações aplicadas com sucesso!");
+
+                // Realizar seed do usuário administrador se não houver usuários
+                if (!db.Usuarios.Any())
+                {
+                    Console.WriteLine("Seeding default admin user...");
+                    var adminUser = new InstitutoLC.Api.Models.Entities.Usuario
+                    {
+                        Username = builder.Configuration["Admin:Username"] ?? "admin",
+                        Role = "Admin",
+                        DataCadastro = DateTime.Now
+                    };
+                    var hasher = new Microsoft.AspNetCore.Identity.PasswordHasher<InstitutoLC.Api.Models.Entities.Usuario>();
+                    var defaultPassword = builder.Configuration["Admin:DefaultPassword"] ?? "admin";
+                    adminUser.PasswordHash = hasher.HashPassword(adminUser, defaultPassword);
+
+                    db.Usuarios.Add(adminUser);
+                    db.SaveChanges();
+                    Console.WriteLine("Default admin user seeded successfully.");
+                }
+
+                // Realizar seed das atividades iniciais se não houver nenhuma
+                if (!db.Atividades.Any())
+                {
+                    Console.WriteLine("Seeding initial activities...");
+                    db.Atividades.AddRange(
+                        new InstitutoLC.Api.Models.Entities.Atividade { Nome = "Futebol de campo (06 a 17 anos)", MinIdade = 6, MaxIdade = 17 },
+                        new InstitutoLC.Api.Models.Entities.Atividade { Nome = "Futsal (06 a 17 anos)", MinIdade = 6, MaxIdade = 17 },
+                        new InstitutoLC.Api.Models.Entities.Atividade { Nome = "Futsal contraturno (06 a 17 anos)", MinIdade = 6, MaxIdade = 17 },
+                        new InstitutoLC.Api.Models.Entities.Atividade { Nome = "Judô (10 a 17 anos)", MinIdade = 10, MaxIdade = 17 },
+                        new InstitutoLC.Api.Models.Entities.Atividade { Nome = "Karatê (05 a 17 anos)", MinIdade = 5, MaxIdade = 17 },
+                        new InstitutoLC.Api.Models.Entities.Atividade { Nome = "Jiu-jitsu (05 a 17 anos)", MinIdade = 5, MaxIdade = 17 },
+                        new InstitutoLC.Api.Models.Entities.Atividade { Nome = "Ballet (05 a 17 anos)", MinIdade = 5, MaxIdade = 17 },
+                        new InstitutoLC.Api.Models.Entities.Atividade { Nome = "Capoeira (14 a 17 anos)", MinIdade = 14, MaxIdade = 17 },
+                        new InstitutoLC.Api.Models.Entities.Atividade { Nome = "Triathlon (08 a 17 anos)", MinIdade = 8, MaxIdade = 17 },
+                        new InstitutoLC.Api.Models.Entities.Atividade { Nome = "Futebol Feminino (06 a 17 anos)", MinIdade = 6, MaxIdade = 17 },
+                        new InstitutoLC.Api.Models.Entities.Atividade { Nome = "Orquestra de Música (08 a 17 anos)", MinIdade = 8, MaxIdade = 17 },
+                        new InstitutoLC.Api.Models.Entities.Atividade { Nome = "Creche (10 meses a 3 anos)", MinIdade = 0, MaxIdade = 3 }
+                    );
+                    db.SaveChanges();
+                    Console.WriteLine("Initial activities seeded successfully.");
+                }
                 break;
             }
             catch (Exception migrateEx)
@@ -163,6 +243,9 @@ if (app.Environment.IsDevelopment())
 
 // Habilitar CORS
 app.UseCors("AllowAll");
+
+// Habilitar Rate Limiting
+app.UseRateLimiter();
 
 app.UseAuthentication();
 app.UseAuthorization();

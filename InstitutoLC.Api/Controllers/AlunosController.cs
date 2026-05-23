@@ -4,6 +4,7 @@ using InstitutoLC.Api.Models.Entities;
 using InstitutoLC.Api.Models.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using OfficeOpenXml;
 using System.Text.RegularExpressions;
@@ -358,11 +359,18 @@ public class AlunosController : ControllerBase
     /// Importa alunos a partir de um arquivo Excel
     /// </summary>
     [HttpPost("importar")]
+    [EnableRateLimiting("import-limit")]
     public async Task<ActionResult> ImportarAlunos(IFormFile arquivo)
     {
         if (arquivo == null || arquivo.Length == 0)
         {
             return BadRequest(new { message = "Arquivo não fornecido" });
+        }
+
+        // Limitar tamanho do arquivo a 5MB
+        if (arquivo.Length > 5 * 1024 * 1024)
+        {
+            return BadRequest(new { message = "O tamanho do arquivo não pode ultrapassar 5MB" });
         }
 
         var extensao = Path.GetExtension(arquivo.FileName).ToLower();
@@ -386,21 +394,31 @@ public class AlunosController : ControllerBase
                 using (var package = new ExcelPackage(stream))
                 {
                     var worksheet = package.Workbook.Worksheets[0];
-                    var rowCount = worksheet.Dimension?.Rows ?? 0;
-
-                    if (rowCount < 2)
-                    {
-                        return BadRequest(new { message = "O arquivo deve conter pelo menos uma linha de cabeçalho e uma linha de dados" });
-                    }
-
-                    // Ler cabeçalhos (primeira linha)
-                    var headers = new Dictionary<string, int>();
                     var dimension = worksheet.Dimension;
                     if (dimension == null)
                     {
                         return BadRequest(new { message = "Arquivo Excel vazio ou inválido" });
                     }
+
+                    // Limitar quantidade de linhas e colunas para evitar exaustão de recursos
+                    if (dimension.End.Row > 1001) // 1 cabeçalho + 1000 dados
+                    {
+                        return BadRequest(new { message = "O arquivo excede o limite de 1000 registros por importação" });
+                    }
+                    if (dimension.End.Column > 50)
+                    {
+                        return BadRequest(new { message = "O arquivo excede o limite permitido de 50 colunas" });
+                    }
+
+                    var rowCount = dimension.Rows;
+
+                    if (rowCount < 2)
+                    {
+                        return BadRequest(new { message = "O arquivo deve conter pelo menos uma linha de cabeçalho e uma linha de dados" });
+                    }
                     
+                    // Ler cabeçalhos (primeira linha)
+                    var headers = new Dictionary<string, int>();
                     for (int col = 1; col <= dimension.End.Column; col++)
                     {
                         var headerValue = worksheet.Cells[1, col].Value?.ToString()?.Trim().ToLower() ?? "";

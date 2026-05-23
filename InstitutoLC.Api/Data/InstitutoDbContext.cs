@@ -1,12 +1,16 @@
 using InstitutoLC.Api.Models.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 
 namespace InstitutoLC.Api.Data;
 
 public class InstitutoDbContext : DbContext
 {
-    public InstitutoDbContext(DbContextOptions<InstitutoDbContext> options) : base(options)
+    private readonly IConfiguration _configuration;
+
+    public InstitutoDbContext(DbContextOptions<InstitutoDbContext> options, IConfiguration configuration) : base(options)
     {
+        _configuration = configuration;
     }
 
     public DbSet<Aluno> Alunos { get; set; }
@@ -15,17 +19,48 @@ public class InstitutoDbContext : DbContext
     public DbSet<Turma> Turmas { get; set; }
     public DbSet<Horario> Horarios { get; set; }
     public DbSet<AlunoTurma> AlunosTurmas { get; set; }
+    public DbSet<Usuario> Usuarios { get; set; }
+    public DbSet<Atividade> Atividades { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        // Configuração da entidade Atividade
+        modelBuilder.Entity<Atividade>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Nome).IsRequired().HasMaxLength(200);
+        });
+
+        // Configuração de Criptografia
+        var encryptionKey = _configuration?["Encryption:Key"] ?? "ChaveSecretaDeCriptografiaDoILC!";
+        var stringEncryptionConverter = new Microsoft.EntityFrameworkCore.Storage.ValueConversion.ValueConverter<string, string>(
+            v => EncryptionHelper.Encrypt(v, encryptionKey),
+            v => EncryptionHelper.Decrypt(v, encryptionKey)
+        );
+        var nullableStringEncryptionConverter = new Microsoft.EntityFrameworkCore.Storage.ValueConversion.ValueConverter<string?, string?>(
+            v => v == null ? null : EncryptionHelper.Encrypt(v, encryptionKey),
+            v => v == null ? null : EncryptionHelper.Decrypt(v, encryptionKey)
+        );
+
+        // Configuração da entidade Usuario
+        modelBuilder.Entity<Usuario>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Username).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.PasswordHash).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.Role).IsRequired().HasMaxLength(50);
+            entity.HasIndex(e => e.Username).IsUnique();
+        });
 
         // Configuração da entidade Aluno
         modelBuilder.Entity<Aluno>(entity =>
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Nome).IsRequired().HasMaxLength(200);
-            entity.Property(e => e.CPF).IsRequired().HasMaxLength(14);
+            entity.Property(e => e.CPF).IsRequired().HasMaxLength(100).HasConversion(stringEncryptionConverter);
+            entity.Property(e => e.RG).IsRequired().HasMaxLength(100).HasConversion(stringEncryptionConverter);
             entity.Property(e => e.Endereco).IsRequired().HasMaxLength(300);
             entity.Property(e => e.NumeroEndereco).IsRequired().HasMaxLength(20);
             entity.Property(e => e.Bairro).IsRequired().HasMaxLength(100);
@@ -49,7 +84,7 @@ public class InstitutoDbContext : DbContext
         modelBuilder.Entity<AnamneseAluno>(entity =>
         {
             entity.HasKey(e => e.Id);
-            entity.Property(e => e.ObservacoesGerais).HasMaxLength(1000);
+            entity.Property(e => e.ObservacoesGerais).HasMaxLength(1000).HasConversion(nullableStringEncryptionConverter);
             
             // Relacionamento um-para-muitos com Enfermidades
             entity.HasMany(e => e.Enfermidades)
@@ -62,7 +97,7 @@ public class InstitutoDbContext : DbContext
         modelBuilder.Entity<Enfermidade>(entity =>
         {
             entity.HasKey(e => e.Id);
-            entity.Property(e => e.Descricao).HasMaxLength(500);
+            entity.Property(e => e.Descricao).HasMaxLength(500).HasConversion(nullableStringEncryptionConverter);
         });
 
         modelBuilder.Entity<Horario>(entity =>

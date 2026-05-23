@@ -300,3 +300,24 @@ input:checked + .slider:before {
   background-color: #dc2626;
   transform: translateY(-1px);
 }
+
+/* Estilo para o botão de Editar Turma */
+.btn-icon.btn-edit {
+  border: none;
+  border-radius: 9999px;
+  padding: 0.5rem 1.25rem;
+  font-weight: 500;
+  cursor: pointer;
+  background-color: var(--primary);
+  color: white;
+  transition: all 0.2s ease;
+  box-shadow: none;
+  outline: none;
+  margin-right: 0.5rem;
+}
+
+.btn-icon.btn-edit:hover {
+  background-color: var(--primary-hover);
+  transform: translateY(-1px);
+}
+
