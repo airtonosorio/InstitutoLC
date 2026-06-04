@@ -66,34 +66,15 @@ InstitutoLC.Api/
 
 1. Clone o repositório
 
-2. Configure a connection string no `appsettings.json`:
+2. O appsettings.json já está configurado para uso com Docker
 
-```json
-{
-  "ConnectionStrings": {
-    "DefaultConnection": "Server=localhost;Database=InstitutoLC;Trusted_Connection=True;TrustServerCertificate=True;"
-  }
-}
-```
+3. O Docker já executa o build e sobe tanto a API quanto o banco de dados automaticamente.
+Nenhum comando dotnet é necessário para rodar o projeto localmente.
 
-3. Execute as migrations:
-
-```bash
-cd InstitutoLC.Api
-dotnet ef migrations add InitialCreate
-dotnet ef database update
-```
-
-4. Execute a aplicação:
-
-```bash
-dotnet run
-```
-
-5. Acesse o Swagger UI:
+4. Acesse o Swagger UI:
 
 ```
-https://localhost:5001/swagger
+http://localhost:8080/swagger/index.html
 ```
 
 ## 📝 Endpoints da API
