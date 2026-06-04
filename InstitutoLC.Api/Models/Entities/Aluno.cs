@@ -9,7 +9,6 @@ public class Aluno
     // Dados Cadastrais
     public string Nome { get; set; } = string.Empty;
     public DateTime DataNascimento { get; set; }
-    public string RG { get; set; } = string.Empty;
     public string CPF { get; set; } = string.Empty;
     
     // Endereço
@@ -34,6 +33,10 @@ public class Aluno
     
     // Anamnese
     public AnamneseAluno? Anamnese { get; set; }
+    
+    // Atividades da ONG
+    public TipoAtividade? Atividade1 { get; set; }
+    public TipoAtividade? Atividade2 { get; set; }
     
     // Auditoria
     public DateTime DataCadastro { get; set; } = DateTime.Now;

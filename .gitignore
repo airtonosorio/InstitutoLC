@@ -1,0 +1,12 @@
+.env
+.vs/
+.vscode/
+.DS_Store
+Thumbs.db
+
+**/bin/
+**/obj/
+**/node_modules/
+frontend/dist/
+InstitutoLC.Api/Views/*
+!InstitutoLC.Api/Views/.gitkeep

@@ -22,7 +22,6 @@ public class InstitutoDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Nome).IsRequired().HasMaxLength(200);
-            entity.Property(e => e.RG).IsRequired().HasMaxLength(20);
             entity.Property(e => e.CPF).IsRequired().HasMaxLength(14);
             entity.Property(e => e.Endereco).IsRequired().HasMaxLength(300);
             entity.Property(e => e.NumeroEndereco).IsRequired().HasMaxLength(20);
