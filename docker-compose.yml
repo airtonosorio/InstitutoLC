@@ -4,7 +4,7 @@ services:
     container_name: instituto-sql
     environment:
       ACCEPT_EULA: "Y"
-      SA_PASSWORD: ${SA_PASSWORD}
+      SA_PASSWORD: ${SA_PASSWORD:?SA_PASSWORD is required}
     volumes:
       - sql-data:/var/opt/mssql
     restart: unless-stopped
@@ -19,11 +19,13 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: "http://+:80"
-      ConnectionStrings__DefaultConnection: "Server=db,1433;Database=InstitutoLC;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True;"
-      Jwt__Key: ${JWT_KEY}
-      Auth__AdminUsername: ${ADMIN_USERNAME}
-      Auth__AdminPassword: ${ADMIN_PASSWORD}
-      Cors__AllowedOrigins: ${ALLOWED_ORIGINS}
+      ConnectionStrings__DefaultConnection: "Server=db,1433;Database=InstitutoLC;User Id=sa;Password=${SA_PASSWORD:?SA_PASSWORD is required};TrustServerCertificate=True;"
+      Jwt__Key: ${JWT_KEY:?JWT_KEY is required}
+      Auth__AdminUsername: ${ADMIN_USERNAME:?ADMIN_USERNAME is required}
+      Auth__AdminPassword: ${ADMIN_PASSWORD:?ADMIN_PASSWORD is required}
+      Auth__CookieSecure: ${COOKIE_SECURE:-false}
+      Encryption__Key: ${ENCRYPTION_KEY:?ENCRYPTION_KEY is required}
+      Cors__AllowedOrigins: ${ALLOWED_ORIGINS:-}
     ports:
       - "8080:80"
     restart: unless-stopped

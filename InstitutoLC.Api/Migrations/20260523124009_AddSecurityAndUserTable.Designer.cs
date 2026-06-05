@@ -4,6 +4,7 @@ using InstitutoLC.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace InstitutoLC.Api.Migrations
 {
     [DbContext(typeof(InstitutoDbContext))]
-    partial class InstitutoDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260523124009_AddSecurityAndUserTable")]
+    partial class AddSecurityAndUserTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -210,30 +213,6 @@ namespace InstitutoLC.Api.Migrations
                         .IsUnique();
 
                     b.ToTable("AnamnesesAlunos");
-                });
-
-            modelBuilder.Entity("InstitutoLC.Api.Models.Entities.Atividade", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("MaxIdade")
-                        .HasColumnType("int");
-
-                    b.Property<int>("MinIdade")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Nome")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Atividades");
                 });
 
             modelBuilder.Entity("InstitutoLC.Api.Models.Entities.Enfermidade", b =>

@@ -4,6 +4,7 @@ using InstitutoLC.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace InstitutoLC.Api.Migrations
 {
     [DbContext(typeof(InstitutoDbContext))]
-    partial class InstitutoDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260511214523_AddNovosCamposTurmas")]
+    partial class AddNovosCamposTurmas
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -47,8 +50,8 @@ namespace InstitutoLC.Api.Migrations
 
                     b.Property<string>("CPF")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasMaxLength(14)
+                        .HasColumnType("nvarchar(14)");
 
                     b.Property<string>("Contato1")
                         .IsRequired()
@@ -124,8 +127,7 @@ namespace InstitutoLC.Api.Migrations
 
                     b.Property<string>("RG")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("RecebeBeneficio")
                         .HasColumnType("bit");
@@ -210,30 +212,6 @@ namespace InstitutoLC.Api.Migrations
                         .IsUnique();
 
                     b.ToTable("AnamnesesAlunos");
-                });
-
-            modelBuilder.Entity("InstitutoLC.Api.Models.Entities.Atividade", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("MaxIdade")
-                        .HasColumnType("int");
-
-                    b.Property<int>("MinIdade")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Nome")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Atividades");
                 });
 
             modelBuilder.Entity("InstitutoLC.Api.Models.Entities.Enfermidade", b =>
@@ -330,40 +308,6 @@ namespace InstitutoLC.Api.Migrations
                     b.HasIndex("HorarioId");
 
                     b.ToTable("Turmas");
-                });
-
-            modelBuilder.Entity("InstitutoLC.Api.Models.Entities.Usuario", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("DataCadastro")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("PasswordHash")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<string>("Role")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("Username")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Username")
-                        .IsUnique();
-
-                    b.ToTable("Usuarios");
                 });
 
             modelBuilder.Entity("InstitutoLC.Api.Models.Entities.AlunoTurma", b =>

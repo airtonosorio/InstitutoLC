@@ -4,11 +4,13 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Cadastro from './pages/Cadastro';
 import Consulta from './pages/Consulta';
+import Turmas from './pages/Turmas';
+import Usuario from './pages/Usuario';
 import ImportExport from './pages/ImportExport';
 
 const ProtectedRoute = ({ children }) => {
-  const token = localStorage.getItem('token');
-  if (!token) return <Navigate to="/login" replace />;
+  const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
   return children;
 };
 
@@ -22,6 +24,8 @@ function App() {
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="cadastro" element={<Cadastro />} />
           <Route path="consulta" element={<Consulta />} />
+          <Route path="turmas" element={<Turmas />} />
+          <Route path="usuario" element={<Usuario />} />
           <Route path="import-export" element={<ImportExport />} />
         </Route>
       </Routes>

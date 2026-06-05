@@ -16,6 +16,25 @@ public class CriarAlunoRequest
     [StringLength(14, ErrorMessage = "CPF deve ter no máximo 14 caracteres")]
     public string CPF { get; set; } = string.Empty;
 
+    [Required(ErrorMessage = "RG é obrigatório")]
+    [StringLength(20, ErrorMessage = "RG deve ter no máximo 20 caracteres")]
+    public string RG { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "Gênero é obrigatório")]
+    public Genero Genero { get; set; }
+
+    [Required(ErrorMessage = "Cor ou Raça é obrigatória")]
+    public CorRaca CorRaca { get; set; }
+
+    [Required(ErrorMessage = "Nome do responsável é obrigatório")]
+    [StringLength(200, ErrorMessage = "Nome do responsável deve ter no máximo 200 caracteres")]
+    public string NomeResponsavel { get; set; } = string.Empty;
+
+    public string NomePai { get; set; } = string.Empty;
+    public string NomeMae { get; set; } = string.Empty;
+    public bool RecebeBeneficio { get; set; }
+    public string RendaFamiliar { get; set; } = string.Empty;
+
     [Required(ErrorMessage = "Endereço é obrigatório")]
     [StringLength(300, ErrorMessage = "Endereço deve ter no máximo 300 caracteres")]
     public string Endereco { get; set; } = string.Empty;
@@ -35,6 +54,15 @@ public class CriarAlunoRequest
     [Required(ErrorMessage = "Estado é obrigatório")]
     [StringLength(2, MinimumLength = 2, ErrorMessage = "Estado deve ter 2 caracteres")]
     public string Estado { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "CEP é obrigatório")]
+    [StringLength(9, ErrorMessage = "CEP deve ter no máximo 9 caracteres")]
+    public string CEP { get; set; } = string.Empty;
+
+    public ZonaMoradia ZonaMoradia { get; set; }
+    public TipoMoradia TipoMoradia { get; set; }
+    public ResponsavelTransporte ResponsavelTransporte { get; set; }
+    public MeioTransporte MeioTransporte { get; set; }
 
     [Required(ErrorMessage = "Escola é obrigatória")]
     [StringLength(200, ErrorMessage = "Escola deve ter no máximo 200 caracteres")]
