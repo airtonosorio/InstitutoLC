@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, UserPlus, Users, FileDown, LogOut, User } from 'lucide-react';
+import { BarChart3, LayoutDashboard, UserPlus, Users, FileDown, LogOut, User } from 'lucide-react';
 import api from '../api';
 import './Layout.css';
 
@@ -51,6 +51,9 @@ export default function Layout() {
           <nav className="sidebar-nav">
             <NavLink to="/dashboard" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
               <LayoutDashboard size={20} /> Dashboard
+            </NavLink>
+            <NavLink to="/analytics" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
+              <BarChart3 size={20} /> Analytics
             </NavLink>
             <NavLink to="/cadastro" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
               <UserPlus size={20} /> Cadastro
