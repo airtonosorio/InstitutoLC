@@ -3,8 +3,8 @@ import logoWhatsApp from '../assets/whatsapp.png';
 
 const WHATSAPP_NUMBER = '5585984167002';
 const WHATSAPP_MESSAGE = encodeURIComponent(
-  'Olá! Gostaria de mais informações sobre os serviços do Instituto LC.'
-);
+  'Atendimento Instituto LC'
+);  
 
 export default function WhatsAppButton() {
 
