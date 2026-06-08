@@ -20,7 +20,7 @@ export default function WhatsAppButton() {
         className="whatsapp-btn__icon"
       />
 
-      <span className="whatsapp-btn__label">Fale conosco</span>
+      <span className="whatsapp-btn__label">Instituto LC</span>
     </a>
   );
 }
