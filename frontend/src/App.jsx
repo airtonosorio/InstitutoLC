@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard';
 import Cadastro from './pages/Cadastro';
 import Consulta from './pages/Consulta';
 import ImportExport from './pages/ImportExport';
+import WhatsAppButton from './pages/Whatsapp';
 
 const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem('token');
@@ -25,6 +26,7 @@ function App() {
           <Route path="import-export" element={<ImportExport />} />
         </Route>
       </Routes>
+      <WhatsAppButton />
     </HashRouter>
   );
 }
