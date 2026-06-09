@@ -1,5 +1,5 @@
 import './WhatsAppButton.css';
-import logoWhatsApp from '../assets/whatsapp.png';
+import logoWhatsApp from '../assets/whatsApp.png';
 
 const WHATSAPP_NUMBER = '5585984167002';
 const WHATSAPP_MESSAGE = encodeURIComponent(
@@ -20,7 +20,7 @@ export default function WhatsAppButton() {
         className="whatsapp-btn__icon"
       />
 
-      <span className="whatsapp-btn__label">Instituto LC</span>
+      {/* <span className="whatsapp-btn__label">Instituto LC</span> */}
     </a>
   );
 }
