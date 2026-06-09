@@ -3,6 +3,13 @@ using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.EntityFrameworkCore;
+using InstitutoLC.Api.Data;
+using InstitutoLC.Api.Models.Entities;
+using InstitutoLC.Api.Models.DTOs;
 
 namespace InstitutoLC.Api.Controllers
 {
@@ -10,10 +17,12 @@ namespace InstitutoLC.Api.Controllers
     [Route("api/[controller]")]
     public class AuthController : ControllerBase
     {
+        private readonly InstitutoDbContext _context;
         private readonly IConfiguration _configuration;
 
-        public AuthController(IConfiguration configuration)
+        public AuthController(InstitutoDbContext context, IConfiguration configuration)
         {
+            _context = context;
             _configuration = configuration;
         }
 
@@ -23,46 +32,193 @@ namespace InstitutoLC.Api.Controllers
             public string Password { get; set; } = string.Empty;
         }
 
-        [HttpPost("login")]
-        public IActionResult Login([FromBody] LoginRequest request)
+        private string GetJwtKey()
         {
-            var adminUsername = _configuration["Auth:AdminUsername"];
-            var adminPassword = _configuration["Auth:AdminPassword"];
-
-            if (string.IsNullOrWhiteSpace(adminUsername) || string.IsNullOrWhiteSpace(adminPassword))
+            var jwtKey = _configuration["Jwt:Key"] ?? _configuration["Jwt:Secret"];
+            if (string.IsNullOrWhiteSpace(jwtKey) || jwtKey.Length < 32)
             {
-                return StatusCode(500, new { message = "Credenciais administrativas nao configuradas" });
+                throw new InvalidOperationException("Jwt:Key must have at least 32 characters.");
             }
 
-            if (request.Username == adminUsername && request.Password == adminPassword)
+            return jwtKey;
+        }
+
+        private string GenerateToken(Usuario user)
+        {
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var key = Encoding.ASCII.GetBytes(GetJwtKey());
+
+            var tokenDescriptor = new SecurityTokenDescriptor
             {
-                var jwtKey = _configuration["Jwt:Key"];
-                if (string.IsNullOrWhiteSpace(jwtKey))
+                Subject = new ClaimsIdentity(new Claim[]
                 {
-                    return StatusCode(500, new { message = "Chave JWT nao configurada" });
-                }
+                    new Claim(ClaimTypes.Name, user.Username),
+                    new Claim(ClaimTypes.Role, user.Role)
+                }),
+                Expires = DateTime.UtcNow.AddHours(8),
+                Issuer = _configuration["Jwt:Issuer"] ?? "InstitutoLC.Api",
+                Audience = _configuration["Jwt:Audience"] ?? "InstitutoLC.Frontend",
+                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
+            };
 
-                var tokenHandler = new JwtSecurityTokenHandler();
-                var key = Encoding.ASCII.GetBytes(jwtKey);
+            var token = tokenHandler.CreateToken(tokenDescriptor);
+            return tokenHandler.WriteToken(token);
+        }
 
-                var tokenDescriptor = new SecurityTokenDescriptor
+        private CookieOptions CreateAuthCookieOptions()
+        {
+            var secure = bool.TryParse(_configuration["Auth:CookieSecure"], out var configuredSecure)
+                ? configuredSecure
+                : Request.IsHttps;
+
+            return new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = secure,
+                SameSite = SameSiteMode.Strict,
+                Path = "/",
+                Expires = DateTimeOffset.UtcNow.AddHours(8)
+            };
+        }
+
+        [HttpPost("login")]
+        [EnableRateLimiting("auth-limit")]
+        public async Task<IActionResult> Login([FromBody] LoginRequest request)
+        {
+            var user = await _context.Usuarios.FirstOrDefaultAsync(u => u.Username == request.Username);
+            if (user != null)
+            {
+                var hasher = new PasswordHasher<Usuario>();
+                var verificationResult = hasher.VerifyHashedPassword(user, user.PasswordHash, request.Password);
+
+                if (verificationResult != PasswordVerificationResult.Failed)
                 {
-                    Subject = new ClaimsIdentity(new Claim[]
+                    var tokenHandler = new JwtSecurityTokenHandler();
+                    var jwtSecret = GetJwtKey();
+                    var key = Encoding.ASCII.GetBytes(jwtSecret);
+
+                    var tokenDescriptor = new SecurityTokenDescriptor
                     {
-                        new Claim(ClaimTypes.Name, request.Username),
-                        new Claim(ClaimTypes.Role, "Admin")
-                    }),
-                    Expires = DateTime.UtcNow.AddHours(8),
-                    SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
-                };
+                        Subject = new ClaimsIdentity(new Claim[]
+                        {
+                            new Claim(ClaimTypes.Name, user.Username),
+                            new Claim(ClaimTypes.Role, user.Role)
+                        }),
+                        Expires = DateTime.UtcNow.AddHours(8),
+                        Issuer = _configuration["Jwt:Issuer"] ?? "InstitutoLC.Api",
+                        Audience = _configuration["Jwt:Audience"] ?? "InstitutoLC.Frontend",
+                        SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
+                    };
 
-                var token = tokenHandler.CreateToken(tokenDescriptor);
-                var tokenString = tokenHandler.WriteToken(token);
+                    var token = tokenHandler.CreateToken(tokenDescriptor);
+                    var tokenString = tokenHandler.WriteToken(token);
 
-                return Ok(new { token = tokenString });
+                    // Configurar cookie HttpOnly
+                    Response.Cookies.Append("jwt", tokenString, CreateAuthCookieOptions());
+
+                    return Ok(new { username = user.Username, role = user.Role });
+                }
             }
 
-            return Unauthorized(new { message = "Usuario ou senha invalidos" });
+            return Unauthorized(new { message = "Usuário ou senha inválidos" });
+        }
+
+        [Authorize]
+        [HttpPost("logout")]
+        public IActionResult Logout()
+        {
+            Response.Cookies.Delete("jwt", new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = CreateAuthCookieOptions().Secure,
+                SameSite = SameSiteMode.Strict,
+                Path = "/"
+            });
+
+            return Ok(new { message = "Logout realizado com sucesso" });
+        }
+
+        [Authorize]
+        [HttpPost("change-password")]
+        [EnableRateLimiting("auth-limit")]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request)
+        {
+            var username = User.Identity?.Name;
+            if (string.IsNullOrEmpty(username))
+            {
+                return Unauthorized();
+            }
+
+            var user = await _context.Usuarios.FirstOrDefaultAsync(u => u.Username == username);
+            if (user == null)
+            {
+                return NotFound(new { message = "Usuário não encontrado" });
+            }
+
+            var hasher = new PasswordHasher<Usuario>();
+            var verificationResult = hasher.VerifyHashedPassword(user, user.PasswordHash, request.OldPassword);
+            if (verificationResult == PasswordVerificationResult.Failed)
+            {
+                return BadRequest(new { message = "Senha atual incorreta" });
+            }
+
+            user.PasswordHash = hasher.HashPassword(user, request.NewPassword);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Senha alterada com sucesso" });
+        }
+
+        [Authorize]
+        [HttpPost("change-username")]
+        [EnableRateLimiting("auth-limit")]
+        public async Task<IActionResult> ChangeUsername([FromBody] ChangeUsernameRequest request)
+        {
+            var currentUsername = User.Identity?.Name;
+            if (string.IsNullOrEmpty(currentUsername))
+            {
+                return Unauthorized();
+            }
+
+            var isTaken = await _context.Usuarios.AnyAsync(u => u.Username == request.NewUsername && u.Username != currentUsername);
+            if (isTaken)
+            {
+                return BadRequest(new { message = "Este nome de usuário já está em uso." });
+            }
+
+            var user = await _context.Usuarios.FirstOrDefaultAsync(u => u.Username == currentUsername);
+            if (user == null)
+            {
+                return NotFound(new { message = "Usuário não encontrado." });
+            }
+
+            user.Username = request.NewUsername;
+            await _context.SaveChangesAsync();
+
+            // Gerar novo token JWT com claims atualizadas
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var jwtSecret = GetJwtKey();
+            var key = Encoding.ASCII.GetBytes(jwtSecret);
+
+            var tokenDescriptor = new SecurityTokenDescriptor
+            {
+                Subject = new ClaimsIdentity(new Claim[]
+                {
+                    new Claim(ClaimTypes.Name, user.Username),
+                    new Claim(ClaimTypes.Role, user.Role)
+                }),
+                Expires = DateTime.UtcNow.AddHours(8),
+                Issuer = _configuration["Jwt:Issuer"] ?? "InstitutoLC.Api",
+                Audience = _configuration["Jwt:Audience"] ?? "InstitutoLC.Frontend",
+                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
+            };
+
+            var token = tokenHandler.CreateToken(tokenDescriptor);
+            var tokenString = tokenHandler.WriteToken(token);
+
+            // Gravar novo cookie de sessão com o username atualizado
+            Response.Cookies.Append("jwt", tokenString, CreateAuthCookieOptions());
+
+            return Ok(new { username = user.Username, role = user.Role });
         }
     }
 }

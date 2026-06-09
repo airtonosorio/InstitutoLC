@@ -1,26 +1,35 @@
 import { useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, UserPlus, Users, FileDown, LogOut } from 'lucide-react';
-import logoImg from '../assets/image.png';
+import { BarChart3, LayoutDashboard, UserPlus, Users, FileDown, LogOut, User } from 'lucide-react';
+import api from '../api';
 import './Layout.css';
 
 export default function Layout() {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
+  const handleLogout = async () => {
+    try {
+      await api.post('/Auth/logout');
+    } catch (err) {
+      console.error('Erro ao efetuar logout no servidor:', err);
+    }
+    localStorage.removeItem('isAuthenticated');
+    localStorage.removeItem('username');
+    localStorage.removeItem('token'); // Limpar token legado
     navigate('/login');
   };
 
   return (
     <div className="layout">
-      {/* HEADER SUPERIOR (Semelhante ao Portal FB UNI da imagem) */}
+      {/* HEADER SUPERIOR */}
       <header className="top-header">
-        <h1>Portal Instituto LC</h1>
-        <button className="global-logout-btn" onClick={() => setShowLogoutModal(true)}>
-          <LogOut size={20} /> Sair
-        </button>
+        <h1>Instituto Lucimário Caitano</h1>
+        <div className="header-actions">
+          <button className="global-logout-btn" onClick={() => setShowLogoutModal(true)}>
+            <LogOut size={20} /> Sair
+          </button>
+        </div>
       </header>
 
       <div className="content-wrapper">
@@ -39,22 +48,27 @@ export default function Layout() {
         )}
 
         <aside className="sidebar">
-          <div className="sidebar-header">
-            <img src={logoImg} alt="Logo" className="sidebar-logo" />
-            <h2>Instituto LC</h2>
-          </div>
           <nav className="sidebar-nav">
-            <NavLink to="/dashboard" className={({isActive}) => isActive ? 'nav-item active' : 'nav-item'}>
+            <NavLink to="/dashboard" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
               <LayoutDashboard size={20} /> Dashboard
             </NavLink>
-            <NavLink to="/cadastro" className={({isActive}) => isActive ? 'nav-item active' : 'nav-item'}>
+            <NavLink to="/analytics" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
+              <BarChart3 size={20} /> Analytics
+            </NavLink>
+            <NavLink to="/cadastro" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
               <UserPlus size={20} /> Cadastro
             </NavLink>
-            <NavLink to="/consulta" className={({isActive}) => isActive ? 'nav-item active' : 'nav-item'}>
+            <NavLink to="/consulta" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
               <Users size={20} /> Consulta
             </NavLink>
-            <NavLink to="/import-export" className={({isActive}) => isActive ? 'nav-item active' : 'nav-item'}>
-              <FileDown size={20} /> Exportar / Excel
+            <NavLink to="/turmas" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
+              <Users size={20} /> Turmas
+            </NavLink>
+            <NavLink to="/usuario" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
+              <User size={20} /> Usuário
+            </NavLink>
+            <NavLink to="/import-export" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
+              <FileDown size={20} /> Exportação/ Importação
             </NavLink>
           </nav>
         </aside>

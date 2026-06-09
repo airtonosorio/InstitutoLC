@@ -10,6 +10,9 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+  align-self: flex-start;
+  min-height: 380px;
+  width: 100%;
 }
 
 .card-icon {

@@ -4,6 +4,7 @@ using InstitutoLC.Api.Models.Entities;
 using InstitutoLC.Api.Models.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using OfficeOpenXml;
 using System.Text.RegularExpressions;
@@ -29,6 +30,7 @@ public class AlunosController : ControllerBase
     public async Task<ActionResult<IEnumerable<AlunoResponse>>> GetAlunos([FromQuery] TipoAtividade? atividade)
     {
         var query = _context.Alunos
+            .Include(a => a.AlunosTurmas)
             .Include(a => a.Anamnese)
                 .ThenInclude(an => an!.Enfermidades)
             .AsQueryable();
@@ -51,6 +53,7 @@ public class AlunosController : ControllerBase
     public async Task<ActionResult<AlunoResponse>> GetAluno(int id)
     {
         var aluno = await _context.Alunos
+            .Include(a => a.AlunosTurmas)
             .Include(a => a.Anamnese)
                 .ThenInclude(an => an!.Enfermidades)
             .FirstOrDefaultAsync(a => a.Id == id);
@@ -80,11 +83,24 @@ public class AlunosController : ControllerBase
             Nome = request.Nome,
             DataNascimento = request.DataNascimento,
             CPF = request.CPF,
+            RG = request.RG,
+            Genero = request.Genero,
+            CorRaca = request.CorRaca,
+            NomeResponsavel = request.NomeResponsavel,
+            NomePai = request.NomePai,
+            NomeMae = request.NomeMae,
+            RecebeBeneficio = request.RecebeBeneficio,
+            RendaFamiliar = request.RendaFamiliar,
             Endereco = request.Endereco,
             NumeroEndereco = request.NumeroEndereco,
             Bairro = request.Bairro,
             Municipio = request.Municipio,
             Estado = request.Estado,
+            CEP = request.CEP,
+            ZonaMoradia = request.ZonaMoradia,
+            TipoMoradia = request.TipoMoradia,
+            ResponsavelTransporte = request.ResponsavelTransporte,
+            MeioTransporte = request.MeioTransporte,
             Escola = request.Escola,
             TipoEscola = request.TipoEscola,
             Serie = request.Serie,
@@ -131,6 +147,10 @@ public class AlunosController : ControllerBase
             .Reference(a => a.Anamnese)
             .LoadAsync();
 
+        await _context.Entry(aluno)
+            .Collection(a => a.AlunosTurmas)
+            .LoadAsync();
+
         if (aluno.Anamnese != null)
         {
             await _context.Entry(aluno.Anamnese)
@@ -148,6 +168,7 @@ public class AlunosController : ControllerBase
     public async Task<ActionResult<AlunoResponse>> UpdateAluno(int id, AtualizarAlunoRequest request)
     {
         var aluno = await _context.Alunos
+            .Include(a => a.AlunosTurmas)
             .Include(a => a.Anamnese)
                 .ThenInclude(an => an!.Enfermidades)
             .FirstOrDefaultAsync(a => a.Id == id);
@@ -174,6 +195,30 @@ public class AlunosController : ControllerBase
         if (request.DataNascimento.HasValue)
             aluno.DataNascimento = request.DataNascimento.Value;
 
+        if (!string.IsNullOrWhiteSpace(request.RG))
+            aluno.RG = request.RG;
+
+        if (request.Genero.HasValue)
+            aluno.Genero = request.Genero.Value;
+
+        if (request.CorRaca.HasValue)
+            aluno.CorRaca = request.CorRaca.Value;
+
+        if (!string.IsNullOrWhiteSpace(request.NomeResponsavel))
+            aluno.NomeResponsavel = request.NomeResponsavel;
+
+        if (request.NomePai != null)
+            aluno.NomePai = request.NomePai;
+
+        if (request.NomeMae != null)
+            aluno.NomeMae = request.NomeMae;
+
+        if (request.RecebeBeneficio.HasValue)
+            aluno.RecebeBeneficio = request.RecebeBeneficio.Value;
+
+        if (request.RendaFamiliar != null)
+            aluno.RendaFamiliar = request.RendaFamiliar;
+
         if (!string.IsNullOrWhiteSpace(request.Endereco))
             aluno.Endereco = request.Endereco;
 
@@ -188,6 +233,21 @@ public class AlunosController : ControllerBase
 
         if (!string.IsNullOrWhiteSpace(request.Estado))
             aluno.Estado = request.Estado;
+
+        if (!string.IsNullOrWhiteSpace(request.CEP))
+            aluno.CEP = request.CEP;
+
+        if (request.ZonaMoradia.HasValue)
+            aluno.ZonaMoradia = request.ZonaMoradia.Value;
+
+        if (request.TipoMoradia.HasValue)
+            aluno.TipoMoradia = request.TipoMoradia.Value;
+
+        if (request.ResponsavelTransporte.HasValue)
+            aluno.ResponsavelTransporte = request.ResponsavelTransporte.Value;
+
+        if (request.MeioTransporte.HasValue)
+            aluno.MeioTransporte = request.MeioTransporte.Value;
 
         if (!string.IsNullOrWhiteSpace(request.Escola))
             aluno.Escola = request.Escola;
@@ -262,6 +322,10 @@ public class AlunosController : ControllerBase
             .Reference(a => a.Anamnese)
             .LoadAsync();
 
+        await _context.Entry(aluno)
+            .Collection(a => a.AlunosTurmas)
+            .LoadAsync();
+
         if (aluno.Anamnese != null)
         {
             await _context.Entry(aluno.Anamnese)
@@ -295,11 +359,18 @@ public class AlunosController : ControllerBase
     /// Importa alunos a partir de um arquivo Excel
     /// </summary>
     [HttpPost("importar")]
+    [EnableRateLimiting("import-limit")]
     public async Task<ActionResult> ImportarAlunos(IFormFile arquivo)
     {
         if (arquivo == null || arquivo.Length == 0)
         {
             return BadRequest(new { message = "Arquivo não fornecido" });
+        }
+
+        // Limitar tamanho do arquivo a 5MB
+        if (arquivo.Length > 5 * 1024 * 1024)
+        {
+            return BadRequest(new { message = "O tamanho do arquivo não pode ultrapassar 5MB" });
         }
 
         var extensao = Path.GetExtension(arquivo.FileName).ToLower();
@@ -323,21 +394,31 @@ public class AlunosController : ControllerBase
                 using (var package = new ExcelPackage(stream))
                 {
                     var worksheet = package.Workbook.Worksheets[0];
-                    var rowCount = worksheet.Dimension?.Rows ?? 0;
-
-                    if (rowCount < 2)
-                    {
-                        return BadRequest(new { message = "O arquivo deve conter pelo menos uma linha de cabeçalho e uma linha de dados" });
-                    }
-
-                    // Ler cabeçalhos (primeira linha)
-                    var headers = new Dictionary<string, int>();
                     var dimension = worksheet.Dimension;
                     if (dimension == null)
                     {
                         return BadRequest(new { message = "Arquivo Excel vazio ou inválido" });
                     }
+
+                    // Limitar quantidade de linhas e colunas para evitar exaustão de recursos
+                    if (dimension.End.Row > 1001) // 1 cabeçalho + 1000 dados
+                    {
+                        return BadRequest(new { message = "O arquivo excede o limite de 1000 registros por importação" });
+                    }
+                    if (dimension.End.Column > 50)
+                    {
+                        return BadRequest(new { message = "O arquivo excede o limite permitido de 50 colunas" });
+                    }
+
+                    var rowCount = dimension.Rows;
+
+                    if (rowCount < 2)
+                    {
+                        return BadRequest(new { message = "O arquivo deve conter pelo menos uma linha de cabeçalho e uma linha de dados" });
+                    }
                     
+                    // Ler cabeçalhos (primeira linha)
+                    var headers = new Dictionary<string, int>();
                     for (int col = 1; col <= dimension.End.Column; col++)
                     {
                         var headerValue = worksheet.Cells[1, col].Value?.ToString()?.Trim().ToLower() ?? "";
@@ -609,11 +690,24 @@ public class AlunosController : ControllerBase
             Nome = aluno.Nome,
             DataNascimento = aluno.DataNascimento,
             CPF = aluno.CPF,
+            RG = aluno.RG,
+            Genero = aluno.Genero,
+            CorRaca = aluno.CorRaca,
+            NomeResponsavel = aluno.NomeResponsavel,
+            NomePai = aluno.NomePai,
+            NomeMae = aluno.NomeMae,
+            RecebeBeneficio = aluno.RecebeBeneficio,
+            RendaFamiliar = aluno.RendaFamiliar,
             Endereco = aluno.Endereco,
             NumeroEndereco = aluno.NumeroEndereco,
             Bairro = aluno.Bairro,
             Municipio = aluno.Municipio,
             Estado = aluno.Estado,
+            CEP = aluno.CEP,
+            ZonaMoradia = aluno.ZonaMoradia,
+            TipoMoradia = aluno.TipoMoradia,
+            ResponsavelTransporte = aluno.ResponsavelTransporte,
+            MeioTransporte = aluno.MeioTransporte,
             Escola = aluno.Escola,
             TipoEscola = aluno.TipoEscola,
             Serie = aluno.Serie,
@@ -623,6 +717,7 @@ public class AlunosController : ControllerBase
             Contato2 = aluno.Contato2,
             Atividade1 = aluno.Atividade1,
             Atividade2 = aluno.Atividade2,
+            Enturmado = aluno.AlunosTurmas != null && aluno.AlunosTurmas.Any(),
             DataCadastro = aluno.DataCadastro,
             DataAtualizacao = aluno.DataAtualizacao,
             Anamnese = aluno.Anamnese == null ? null : new AnamneseResponse

@@ -1,20 +1,15 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: '/api'
-});
-
-api.interceptors.request.use(config => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
+  baseURL: '/api',
+  withCredentials: true
 });
 
 api.interceptors.response.use(res => res, err => {
   if (err.response && err.response.status === 401) {
-    localStorage.removeItem('token');
+    localStorage.removeItem('isAuthenticated');
+    localStorage.removeItem('username');
+    localStorage.removeItem('token'); // Limpar token legado
     window.location.hash = '#/login';
   }
   return Promise.reject(err);
