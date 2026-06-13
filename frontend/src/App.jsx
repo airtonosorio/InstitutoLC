@@ -8,7 +8,6 @@ import Consulta from './pages/Consulta';
 import Turmas from './pages/Turmas';
 import Usuario from './pages/Usuario';
 import ImportExport from './pages/ImportExport';
-import WhatsAppButton from './pages/Whatsapp';
 
 const ProtectedRoute = ({ children }) => {
   const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
@@ -32,7 +31,6 @@ function App() {
           <Route path="import-export" element={<ImportExport />} />
         </Route>
       </Routes>
-      <WhatsAppButton />
     </HashRouter>
   );
 }
