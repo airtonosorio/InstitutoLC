@@ -5,12 +5,127 @@ import { differenceInYears, parseISO } from 'date-fns';
 import api from '../api';
 import './ImportExport.css';
 
+const generosMap = {
+  1: 'Masculino',
+  2: 'Feminino',
+  3: 'Outro',
+  4: 'Prefiro não dizer'
+};
+
+const corRacaMap = {
+  1: 'Branco',
+  2: 'Preto',
+  3: 'Pardo',
+  4: 'Amarelo',
+  5: 'Indígena',
+  6: 'Não Informado'
+};
+
+const zonaMoradiaMap = {
+  1: 'Urbana',
+  2: 'Rural'
+};
+
+const tipoMoradiaMap = {
+  1: 'Própria',
+  2: 'Alugada',
+  3: 'Cedida',
+  4: 'Outro'
+};
+
+const tipoEscolaMap = {
+  0: 'Pública',
+  1: 'Privada',
+  2: 'Privada'
+};
+
 const turnosMap = {
   0: 'Matutino',
   1: 'Vespertino',
   2: 'Noturno',
-  3: 'Integral'
+  3: 'Integral',
+  4: 'Integral'
 };
+
+const responsavelTransporteMap = {
+  1: 'Mãe',
+  2: 'Pai',
+  3: 'Sozinho',
+  4: 'Outro (Membro da Família)',
+  5: 'Outro (Não Membro)'
+};
+
+const meioTransporteMap = {
+  1: 'Andando',
+  2: 'Ônibus',
+  3: 'Veículo Particular',
+  4: 'Bicicleta'
+};
+
+const simNao = value => value ? 'Sim' : 'Não';
+
+const hasEnfermidade = (aluno, tipo, descricaoInclui = '') => {
+  const enfermidades = aluno.anamnese?.enfermidades || [];
+  return enfermidades.some(enf => {
+    const descricao = (enf.descricao || '').toLowerCase();
+    return enf.tipoEnfermidade === tipo && (!descricaoInclui || descricao.includes(descricaoInclui.toLowerCase()));
+  });
+};
+
+const getEnfermidadeTexto = (aluno, prefixo) => {
+  const enfermidades = aluno.anamnese?.enfermidades || [];
+  const item = enfermidades.find(enf => (enf.descricao || '').toLowerCase().startsWith(`${prefixo.toLowerCase()}:`));
+  return item?.descricao?.split(':').slice(1).join(':').trim() || '';
+};
+
+const buildExportRow = (aluno, atividadesMap) => ({
+  'Nome': aluno.nome || '',
+  'Data de Nascimento': aluno.dataNascimento ? new Date(aluno.dataNascimento).toLocaleDateString('pt-BR') : '',
+  'Idade': aluno.dataNascimento ? differenceInYears(new Date(), parseISO(aluno.dataNascimento)) : '',
+  'CPF': aluno.cpf || '',
+  'RG': aluno.rg || '',
+  'Gênero': generosMap[aluno.genero] || '',
+  'Cor ou Etnia': corRacaMap[aluno.corRaca] || '',
+  'Nome do Responsável': aluno.nomeResponsavel || '',
+  'Nome do Pai': aluno.nomePai || '',
+  'Nome da Mãe': aluno.nomeMae || '',
+  'Recebe Benefício': simNao(aluno.recebeBeneficio),
+  'Renda Familiar': aluno.rendaFamiliar || '',
+  'CEP': aluno.cep || '',
+  'Endereço': aluno.endereco || '',
+  'Número': aluno.numeroEndereco || '',
+  'Bairro': aluno.bairro || '',
+  'Município': aluno.municipio || '',
+  'Estado': aluno.estado || '',
+  'Zona de Moradia': zonaMoradiaMap[aluno.zonaMoradia] || '',
+  'Tipo de Moradia': tipoMoradiaMap[aluno.tipoMoradia] || '',
+  'Escola': aluno.escola || '',
+  'Tipo Escola': tipoEscolaMap[aluno.tipoEscola] || '',
+  'Série': aluno.serie || '',
+  'Turno': turnosMap[aluno.turno] || '',
+  'Número de Pessoas na Casa': aluno.numeroPessoasCasa || '',
+  'Responsável Transporte': responsavelTransporteMap[aluno.responsavelTransporte] || '',
+  'Meio Transporte': meioTransporteMap[aluno.meioTransporte] || '',
+  'Contato 1': aluno.contato1 || '',
+  'Contato 2': aluno.contato2 || '',
+  'Bronquite/Asma': simNao(hasEnfermidade(aluno, 1)),
+  'Doença Cardiovascular': simNao(hasEnfermidade(aluno, 2)),
+  'Epilepsia': simNao(hasEnfermidade(aluno, 3, 'Epilepsia')),
+  'Convulsões': simNao(hasEnfermidade(aluno, 3, 'Convuls')),
+  'Diabetes': simNao(hasEnfermidade(aluno, 4)),
+  'Problemas Auditivos': simNao(hasEnfermidade(aluno, 5)),
+  'Alergia': simNao(hasEnfermidade(aluno, 8)),
+  'Problemas Oculares': simNao(hasEnfermidade(aluno, 6)),
+  'Problemas Ortopédicos': simNao(hasEnfermidade(aluno, 7)),
+  'Medicamento': getEnfermidadeTexto(aluno, 'Medicamento'),
+  'Cirurgia': getEnfermidadeTexto(aluno, 'Cirurgia'),
+  'Outro': getEnfermidadeTexto(aluno, 'Outro'),
+  'Observações Gerais': aluno.anamnese?.observacoesGerais || '',
+  'Atividade 1': atividadesMap[aluno.atividade1] || '',
+  'Atividade 2': aluno.atividade2 !== null ? (atividadesMap[aluno.atividade2] || '') : '',
+  'Enturmado': simNao(aluno.enturmado),
+  'Data Cadastro': aluno.dataCadastro ? new Date(aluno.dataCadastro).toLocaleDateString('pt-BR') : ''
+});
 
 export default function ImportExport() {
   const [loading, setLoading] = useState(false);
@@ -29,7 +144,6 @@ export default function ImportExport() {
     atividadesMap[a.id] = a.nome;
   });
 
-  // Filtros de Exportação
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({
     atividade: '',
@@ -70,7 +184,6 @@ export default function ImportExport() {
       const res = await api.get('/Alunos');
       let alunos = res.data;
 
-      // Aplicar filtros avançados (Mesma lógica da Consulta)
       if (filters.atividade !== '') {
         const ativ = parseInt(filters.atividade);
         alunos = alunos.filter(a => a.atividade1 === ativ || a.atividade2 === ativ);
@@ -86,12 +199,12 @@ export default function ImportExport() {
       }
       if (filters.dataInicio) {
         const start = new Date(filters.dataInicio);
-        start.setHours(0,0,0,0);
+        start.setHours(0, 0, 0, 0);
         alunos = alunos.filter(a => new Date(a.dataCadastro) >= start);
       }
       if (filters.dataFim) {
         const end = new Date(filters.dataFim);
-        end.setHours(23,59,59,999);
+        end.setHours(23, 59, 59, 999);
         alunos = alunos.filter(a => new Date(a.dataCadastro) <= end);
       }
 
@@ -101,35 +214,13 @@ export default function ImportExport() {
         return;
       }
 
-      const dataToExport = alunos.map(a => ({
-        'Nome': a.nome,
-        'Data de Nascimento': new Date(a.dataNascimento).toLocaleDateString('pt-BR'),
-        'Idade': differenceInYears(new Date(), parseISO(a.dataNascimento)),
-        'CPF': a.cpf,
-        'Endereço': a.endereco,
-        'Número': a.numeroEndereco,
-        'Bairro': a.bairro,
-        'Município': a.municipio,
-        'Estado': a.estado,
-        'Escola': a.escola,
-        'Tipo Escola': a.tipoEscola === 0 ? 'Pública' : 'Privada',
-        'Série': a.serie,
-        'Turno': turnosMap[a.turno],
-        'Número de Pessoas na Casa': a.numeroPessoasCasa,
-        'Contato 1': a.contato1,
-        'Contato 2': a.contato2 || '',
-        'Atividade 1': atividadesMap[a.atividade1],
-        'Atividade 2': a.atividade2 !== null ? atividadesMap[a.atividade2] : '',
-        'Data Cadastro': new Date(a.dataCadastro).toLocaleDateString('pt-BR')
-      }));
-
+      const dataToExport = alunos.map(a => buildExportRow(a, atividadesMap));
       const worksheet = XLSX.utils.json_to_sheet(dataToExport);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, 'Alunos');
       XLSX.writeFile(workbook, 'Alunos_Exportados.xlsx');
 
       setMsg({ type: 'success', text: `Download iniciado com ${alunos.length} registros!` });
-
     } catch (err) {
       setMsg({ type: 'error', text: 'Erro ao gerar arquivo Excel.' });
     } finally {
@@ -142,13 +233,12 @@ export default function ImportExport() {
       <h1 className="page-title">Exportação/ Importação</h1>
 
       <div className="actions-grid">
-        {/* Card Importação */}
         <div className="action-card glass-panel">
           <div className="card-icon">
             <Upload size={32} color="var(--primary)" />
           </div>
           <h2>Importar Excel</h2>
-          <p>Faça o upload de uma planilha para cadastrar alunos em massa. É tolerante a campos ausentes (exceto Nome e CPF).</p>
+          <p>Faça o upload de uma planilha para cadastrar alunos em massa. A planilha deve ter todas as colunas do modelo exportado; células vazias são aceitas quando o cadastro permitir.</p>
 
           <input
             type="file"
@@ -167,13 +257,12 @@ export default function ImportExport() {
           </button>
         </div>
 
-        {/* Card Exportação */}
         <div className="action-card glass-panel">
           <div className="card-icon">
             <Download size={32} color="#10b981" />
           </div>
           <h2>Exportar Excel</h2>
-          <p>Gere uma planilha com os dados dos alunos cadastrados. Você pode aplicar filtros antes de exportar.</p>
+          <p>Gere uma planilha com todos os campos do cadastro, inclusive colunas vazias, para consulta ou reimportação.</p>
 
           <button
             className={`btn-filter ${showFilters ? 'active' : ''}`}
@@ -187,7 +276,7 @@ export default function ImportExport() {
             <div className="export-filters">
               <div className="filter-group">
                 <label>Atividade</label>
-                <select value={filters.atividade} onChange={e => setFilters({...filters, atividade: e.target.value})}>
+                <select value={filters.atividade} onChange={e => setFilters({ ...filters, atividade: e.target.value })}>
                   <option value="">Todas</option>
                   {atividades.map(ativ => (
                     <option key={ativ.id} value={ativ.id}>{ativ.nome.replace(/\s*\([^)]*\)/g, '')}</option>
@@ -196,16 +285,16 @@ export default function ImportExport() {
               </div>
               <div className="filter-group">
                 <label>Idade Min / Máx</label>
-                <div style={{display: 'flex', gap: '0.5rem'}}>
-                  <input type="number" min="0" placeholder="Min" value={filters.idadeMin} onChange={e => setFilters({...filters, idadeMin: e.target.value})} style={{width: '50%'}} />
-                  <input type="number" min="0" placeholder="Máx" value={filters.idadeMax} onChange={e => setFilters({...filters, idadeMax: e.target.value})} style={{width: '50%'}} />
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <input type="number" min="0" placeholder="Min" value={filters.idadeMin} onChange={e => setFilters({ ...filters, idadeMin: e.target.value })} style={{ width: '50%' }} />
+                  <input type="number" min="0" placeholder="Máx" value={filters.idadeMax} onChange={e => setFilters({ ...filters, idadeMax: e.target.value })} style={{ width: '50%' }} />
                 </div>
               </div>
               <div className="filter-group">
                 <label>Data Cadastro (Início e Fim)</label>
-                <div style={{display: 'flex', gap: '0.5rem'}}>
-                  <input type="date" value={filters.dataInicio} onChange={e => setFilters({...filters, dataInicio: e.target.value})} style={{width: '50%'}} />
-                  <input type="date" value={filters.dataFim} onChange={e => setFilters({...filters, dataFim: e.target.value})} style={{width: '50%'}} />
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <input type="date" value={filters.dataInicio} onChange={e => setFilters({ ...filters, dataInicio: e.target.value })} style={{ width: '50%' }} />
+                  <input type="date" value={filters.dataFim} onChange={e => setFilters({ ...filters, dataFim: e.target.value })} style={{ width: '50%' }} />
                 </div>
               </div>
             </div>
