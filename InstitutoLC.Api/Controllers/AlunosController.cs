@@ -476,7 +476,14 @@ public class AlunosController : ControllerBase
                         continue;
                     }
 
-                    var anamnese = BuildAnamnese(worksheet, headers, row);
+                    if (!TryGetOptionalDate(worksheet, headers, row, "Data Cadastro", out var dataCadastroImportada, out var dataCadastroTexto))
+                    {
+                        erros.Add($"Linha {row}: Data Cadastro inválida: {dataCadastroTexto}");
+                        continue;
+                    }
+
+                    var dataCadastro = dataCadastroImportada ?? DateTime.Now;
+                    var anamnese = BuildAnamnese(worksheet, headers, row, dataCadastro);
 
                     var aluno = new Aluno
                     {
@@ -511,7 +518,7 @@ public class AlunosController : ControllerBase
                         Atividade1 = ParseAtividade(GetCellText(worksheet, headers, row, "Atividade 1"), atividades),
                         Atividade2 = ParseAtividade(GetCellText(worksheet, headers, row, "Atividade 2"), atividades),
                         Anamnese = anamnese,
-                        DataCadastro = DateTime.Now
+                        DataCadastro = dataCadastro
                     };
 
                     alunosParaImportar.Add(aluno);
@@ -1037,6 +1044,38 @@ public class AlunosController : ControllerBase
             || DateTime.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.None, out date);
     }
 
+    private static bool TryGetOptionalDate(
+        ExcelWorksheet worksheet,
+        Dictionary<string, int> headers,
+        int row,
+        string column,
+        out DateTime? date,
+        out string rawValue)
+    {
+        date = null;
+        rawValue = string.Empty;
+        var key = NormalizeHeader(column);
+        if (!headers.TryGetValue(key, out var col))
+        {
+            return true;
+        }
+
+        var cell = worksheet.Cells[row, col];
+        rawValue = (cell.Text ?? cell.Value?.ToString() ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(rawValue))
+        {
+            return true;
+        }
+
+        if (TryGetDate(cell.Value, out var parsedDate) || TryGetDate(rawValue, out parsedDate))
+        {
+            date = parsedDate;
+            return true;
+        }
+
+        return false;
+    }
+
     private static Genero ParseGenero(string value)
     {
         var normalized = NormalizeValue(value);
@@ -1186,7 +1225,7 @@ public class AlunosController : ControllerBase
         return atividade == null ? null : (TipoAtividade)atividade.Id;
     }
 
-    private static AnamneseAluno? BuildAnamnese(ExcelWorksheet worksheet, Dictionary<string, int> headers, int row)
+    private static AnamneseAluno? BuildAnamnese(ExcelWorksheet worksheet, Dictionary<string, int> headers, int row, DateTime dataCadastro)
     {
         var enfermidades = new List<Enfermidade>();
 
@@ -1198,7 +1237,7 @@ public class AlunosController : ControllerBase
                 {
                     TipoEnfermidade = tipo,
                     Descricao = descricao,
-                    DataCadastro = DateTime.Now
+                    DataCadastro = dataCadastro
                 });
             }
         }
@@ -1212,7 +1251,7 @@ public class AlunosController : ControllerBase
                 {
                     TipoEnfermidade = TipoEnfermidade.Outros,
                     Descricao = $"{prefix}: {text.Trim()}",
-                    DataCadastro = DateTime.Now
+                    DataCadastro = dataCadastro
                 });
             }
         }
@@ -1240,7 +1279,7 @@ public class AlunosController : ControllerBase
         {
             PossuiEnfermidade = enfermidades.Any(),
             ObservacoesGerais = EmptyToNull(observacoes),
-            DataCadastro = DateTime.Now,
+            DataCadastro = dataCadastro,
             Enfermidades = enfermidades
         };
     }
