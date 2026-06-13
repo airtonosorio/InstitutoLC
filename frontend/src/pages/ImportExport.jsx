@@ -35,15 +35,15 @@ const tipoMoradiaMap = {
 
 const tipoEscolaMap = {
   0: 'Pública',
-  1: 'Privada',
+  1: 'Pública',
   2: 'Privada'
 };
 
 const turnosMap = {
   0: 'Matutino',
-  1: 'Vespertino',
-  2: 'Noturno',
-  3: 'Integral',
+  1: 'Matutino',
+  2: 'Vespertino',
+  3: 'Noturno',
   4: 'Integral'
 };
 
@@ -221,7 +221,7 @@ export default function ImportExport() {
       XLSX.writeFile(workbook, 'Alunos_Exportados.xlsx');
 
       setMsg({ type: 'success', text: `Download iniciado com ${alunos.length} registros!` });
-    } catch (err) {
+    } catch {
       setMsg({ type: 'error', text: 'Erro ao gerar arquivo Excel.' });
     } finally {
       setLoading(false);
