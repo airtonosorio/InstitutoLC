@@ -13,7 +13,7 @@ import {
 } from 'chart.js';
 import { Bar, Doughnut, Line } from 'react-chartjs-2';
 import { Activity, GraduationCap, HeartPulse, TrendingUp, Users } from 'lucide-react';
-import { differenceInYears, format, parseISO } from 'date-fns';
+import { differenceInYears, parseISO } from 'date-fns';
 import api from '../api';
 import './Analytics.css';
 
@@ -38,14 +38,28 @@ const generosMap = {
 
 const turnosMap = {
   0: 'Matutino',
-  1: 'Vespertino',
-  2: 'Noturno',
-  3: 'Integral'
+  1: 'Matutino',
+  2: 'Vespertino',
+  3: 'Noturno',
+  4: 'Integral'
 };
 
 const tipoEscolaMap = {
   0: 'Pública',
-  1: 'Privada'
+  1: 'Pública',
+  2: 'Privada'
+};
+
+const turnoFilterOptions = {
+  1: 'Matutino',
+  2: 'Vespertino',
+  3: 'Noturno',
+  4: 'Integral'
+};
+
+const tipoEscolaFilterOptions = {
+  1: 'Pública',
+  2: 'Privada'
 };
 
 const zonaMoradiaMap = {
@@ -83,6 +97,10 @@ const emptyFilters = {
 };
 
 const asNumber = value => value === null || value === undefined || value === '' ? null : Number(value);
+
+const normalizeTurno = value => Number(value) === 0 ? 1 : Number(value);
+
+const normalizeTipoEscola = value => Number(value) === 2 ? 2 : 1;
 
 const getAge = aluno => {
   if (!aluno.dataNascimento) return null;
@@ -173,8 +191,8 @@ export default function Analytics() {
       }
 
       if (filters.genero && Number(aluno.genero) !== Number(filters.genero)) return false;
-      if (filters.turno && Number(aluno.turno) !== Number(filters.turno)) return false;
-      if (filters.tipoEscola !== '' && Number(aluno.tipoEscola) !== Number(filters.tipoEscola)) return false;
+      if (filters.turno && normalizeTurno(aluno.turno) !== Number(filters.turno)) return false;
+      if (filters.tipoEscola !== '' && normalizeTipoEscola(aluno.tipoEscola) !== Number(filters.tipoEscola)) return false;
       if (filters.zonaMoradia && Number(aluno.zonaMoradia) !== Number(filters.zonaMoradia)) return false;
       if (filters.enturmado !== '' && Boolean(aluno.enturmado) !== (filters.enturmado === 'sim')) return false;
       if (filters.beneficio !== '' && Boolean(aluno.recebeBeneficio) !== (filters.beneficio === 'sim')) return false;
@@ -219,10 +237,10 @@ export default function Analytics() {
     ].filter(([, value]) => value > 0);
 
     const generoEntries = countBy(filteredAlunos, aluno => generosMap[aluno.genero] || 'Não informado');
-    const turnoEntries = countBy(filteredAlunos, aluno => turnosMap[aluno.turno] || 'Não informado');
+    const turnoEntries = countBy(filteredAlunos, aluno => turnosMap[normalizeTurno(aluno.turno)] || 'Não informado');
     const escolaEntries = countBy(filteredAlunos, aluno => aluno.escola?.trim() || 'Não informada');
     const bairroEntries = countBy(filteredAlunos, aluno => aluno.bairro?.trim() || 'Não informado');
-    const tipoEscolaEntries = countBy(filteredAlunos, aluno => tipoEscolaMap[aluno.tipoEscola] || 'Não informado');
+    const tipoEscolaEntries = countBy(filteredAlunos, aluno => tipoEscolaMap[normalizeTipoEscola(aluno.tipoEscola)] || 'Não informado');
     const zonaEntries = countBy(filteredAlunos, aluno => zonaMoradiaMap[aluno.zonaMoradia] || 'Não informada');
 
     const enfermidadeEntries = countBy(
@@ -358,14 +376,14 @@ export default function Analytics() {
           <label>Turno</label>
           <select value={filters.turno} onChange={e => handleFilterChange('turno', e.target.value)}>
             <option value="">Todos</option>
-            {Object.entries(turnosMap).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+            {Object.entries(turnoFilterOptions).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
           </select>
         </div>
         <div className="filter-group">
           <label>Tipo de escola</label>
           <select value={filters.tipoEscola} onChange={e => handleFilterChange('tipoEscola', e.target.value)}>
             <option value="">Todas</option>
-            {Object.entries(tipoEscolaMap).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+            {Object.entries(tipoEscolaFilterOptions).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
           </select>
         </div>
         <div className="filter-group">

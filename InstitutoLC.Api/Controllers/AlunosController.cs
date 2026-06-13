@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using OfficeOpenXml;
+using System.Globalization;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace InstitutoLC.Api.Controllers;
@@ -360,6 +362,211 @@ public class AlunosController : ControllerBase
     /// </summary>
     [HttpPost("importar")]
     [EnableRateLimiting("import-limit")]
+    public async Task<ActionResult> ImportarAlunosNormalizado(IFormFile arquivo)
+    {
+        if (arquivo == null || arquivo.Length == 0)
+        {
+            return BadRequest(new { message = "Arquivo não fornecido" });
+        }
+
+        if (arquivo.Length > 5 * 1024 * 1024)
+        {
+            return BadRequest(new { message = "O tamanho do arquivo não pode ultrapassar 5MB" });
+        }
+
+        var extensao = Path.GetExtension(arquivo.FileName).ToLower();
+        if (extensao != ".xlsx" && extensao != ".xls")
+        {
+            return BadRequest(new { message = "Formato de arquivo inválido. Use .xlsx ou .xls" });
+        }
+
+        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+        var erros = new List<string>();
+        var sucessos = new List<object>();
+        var alunosParaImportar = new List<Aluno>();
+        var atividades = await _context.Atividades.AsNoTracking().ToListAsync();
+
+        try
+        {
+            using var stream = new MemoryStream();
+            await arquivo.CopyToAsync(stream);
+            stream.Position = 0;
+
+            using var package = new ExcelPackage(stream);
+            var worksheet = package.Workbook.Worksheets.FirstOrDefault();
+            var dimension = worksheet?.Dimension;
+            if (worksheet == null || dimension == null)
+            {
+                return BadRequest(new { message = "Arquivo Excel vazio ou inválido" });
+            }
+
+            if (dimension.End.Row > 1001)
+            {
+                return BadRequest(new { message = "O arquivo excede o limite de 1000 registros por importação" });
+            }
+            if (dimension.End.Column > 60)
+            {
+                return BadRequest(new { message = "O arquivo excede o limite permitido de 60 colunas" });
+            }
+            if (dimension.Rows < 2)
+            {
+                return BadRequest(new { message = "O arquivo deve conter pelo menos uma linha de cabeçalho e uma linha de dados" });
+            }
+
+            var headers = new Dictionary<string, int>();
+            for (int col = 1; col <= dimension.End.Column; col++)
+            {
+                var header = NormalizeHeader(worksheet.Cells[1, col].Value?.ToString());
+                if (!string.IsNullOrWhiteSpace(header))
+                {
+                    headers[header] = col;
+                }
+            }
+
+            var colunasFaltando = RequiredImportColumns
+                .Where(column => !headers.ContainsKey(NormalizeHeader(column)))
+                .ToList();
+
+            if (colunasFaltando.Any())
+            {
+                return BadRequest(new
+                {
+                    message = $"A planilha precisa ter todas as colunas do modelo. Colunas faltando: {string.Join(", ", colunasFaltando)}"
+                });
+            }
+
+            for (int row = 2; row <= dimension.End.Row; row++)
+            {
+                try
+                {
+                    if (IsEmptyRow(worksheet, row, dimension.End.Column))
+                    {
+                        continue;
+                    }
+
+                    var nome = GetCellText(worksheet, headers, row, "Nome");
+                    if (string.IsNullOrWhiteSpace(nome))
+                    {
+                        erros.Add($"Linha {row}: Nome é obrigatório");
+                        continue;
+                    }
+
+                    if (!TryGetDate(worksheet.Cells[row, headers[NormalizeHeader("Data de Nascimento")]].Value, out var dataNascimento))
+                    {
+                        erros.Add($"Linha {row}: Data de nascimento é obrigatória e precisa ser válida");
+                        continue;
+                    }
+
+                    var cpf = OnlyDigits(GetCellText(worksheet, headers, row, "CPF"));
+                    if (string.IsNullOrWhiteSpace(cpf))
+                    {
+                        erros.Add($"Linha {row}: CPF é obrigatório");
+                        continue;
+                    }
+
+                    if (await _context.Alunos.AnyAsync(a => a.CPF == cpf))
+                    {
+                        erros.Add($"Linha {row}: CPF {cpf} já cadastrado");
+                        continue;
+                    }
+
+                    if (alunosParaImportar.Any(a => a.CPF == cpf))
+                    {
+                        erros.Add($"Linha {row}: CPF {cpf} duplicado no arquivo");
+                        continue;
+                    }
+
+                    var anamnese = BuildAnamnese(worksheet, headers, row);
+
+                    var aluno = new Aluno
+                    {
+                        Nome = nome,
+                        DataNascimento = dataNascimento,
+                        CPF = cpf,
+                        RG = GetCellText(worksheet, headers, row, "RG"),
+                        Genero = ParseGenero(GetCellText(worksheet, headers, row, "Gênero")),
+                        CorRaca = ParseCorRaca(GetCellText(worksheet, headers, row, "Cor ou Etnia")),
+                        NomeResponsavel = GetCellText(worksheet, headers, row, "Nome do Responsável"),
+                        NomePai = GetCellText(worksheet, headers, row, "Nome do Pai"),
+                        NomeMae = GetCellText(worksheet, headers, row, "Nome da Mãe"),
+                        RecebeBeneficio = ParseBool(GetCellText(worksheet, headers, row, "Recebe Benefício")),
+                        RendaFamiliar = GetCellText(worksheet, headers, row, "Renda Familiar"),
+                        CEP = GetCellText(worksheet, headers, row, "CEP"),
+                        Endereco = GetCellText(worksheet, headers, row, "Endereço"),
+                        NumeroEndereco = GetCellText(worksheet, headers, row, "Número"),
+                        Bairro = GetCellText(worksheet, headers, row, "Bairro"),
+                        Municipio = GetCellText(worksheet, headers, row, "Município"),
+                        Estado = GetCellText(worksheet, headers, row, "Estado").ToUpperInvariant(),
+                        ZonaMoradia = ParseZonaMoradia(GetCellText(worksheet, headers, row, "Zona de Moradia")),
+                        TipoMoradia = ParseTipoMoradia(GetCellText(worksheet, headers, row, "Tipo de Moradia")),
+                        Escola = GetCellText(worksheet, headers, row, "Escola"),
+                        TipoEscola = ParseTipoEscola(GetCellText(worksheet, headers, row, "Tipo Escola")),
+                        Serie = GetCellText(worksheet, headers, row, "Série"),
+                        Turno = ParseTurno(GetCellText(worksheet, headers, row, "Turno")),
+                        NumeroPessoasCasa = ParseIntOrDefault(GetCellText(worksheet, headers, row, "Número de Pessoas na Casa"), 1),
+                        ResponsavelTransporte = ParseResponsavelTransporte(GetCellText(worksheet, headers, row, "Responsável Transporte")),
+                        MeioTransporte = ParseMeioTransporte(GetCellText(worksheet, headers, row, "Meio Transporte")),
+                        Contato1 = GetCellText(worksheet, headers, row, "Contato 1"),
+                        Contato2 = EmptyToNull(GetCellText(worksheet, headers, row, "Contato 2")),
+                        Atividade1 = ParseAtividade(GetCellText(worksheet, headers, row, "Atividade 1"), atividades),
+                        Atividade2 = ParseAtividade(GetCellText(worksheet, headers, row, "Atividade 2"), atividades),
+                        Anamnese = anamnese,
+                        DataCadastro = DateTime.Now
+                    };
+
+                    alunosParaImportar.Add(aluno);
+                    sucessos.Add(new { linha = row, nome, cpf });
+                }
+                catch (Exception ex)
+                {
+                    erros.Add($"Linha {row}: Erro ao processar - {ex.Message}");
+                }
+            }
+
+            if (erros.Any())
+            {
+                return BadRequest(new
+                {
+                    sucesso = false,
+                    message = "A importação falhou porque existem erros no arquivo. Nenhum aluno foi importado.",
+                    totalImportados = 0,
+                    totalErros = erros.Count,
+                    alunos = new List<object>(),
+                    erros
+                });
+            }
+
+            if (alunosParaImportar.Any())
+            {
+                try
+                {
+                    _context.Alunos.AddRange(alunosParaImportar);
+                    await _context.SaveChangesAsync();
+                }
+                catch (Exception ex)
+                {
+                    return StatusCode(500, new { message = $"Erro ao salvar no banco de dados: {ex.Message}" });
+                }
+            }
+
+            return Ok(new
+            {
+                sucesso = true,
+                totalImportados = alunosParaImportar.Count,
+                totalErros = 0,
+                alunos = sucessos,
+                erros = new List<string>()
+            });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = $"Erro ao processar arquivo: {ex.Message}" });
+        }
+    }
+
+    [NonAction]
+    [HttpPost("importar")]
+    [EnableRateLimiting("import-limit")]
     public async Task<ActionResult> ImportarAlunos(IFormFile arquivo)
     {
         if (arquivo == null || arquivo.Length == 0)
@@ -651,19 +858,14 @@ public class AlunosController : ControllerBase
             // Se chegou aqui, todos os registros são válidos - importar tudo em uma transação
             if (alunosParaImportar.Any())
             {
-                using (var transaction = await _context.Database.BeginTransactionAsync())
+                try
                 {
-                    try
-                    {
-                        _context.Alunos.AddRange(alunosParaImportar);
-                        await _context.SaveChangesAsync();
-                        await transaction.CommitAsync();
-                    }
-                    catch (Exception ex)
-                    {
-                        await transaction.RollbackAsync();
-                        return StatusCode(500, new { message = $"Erro ao salvar no banco de dados: {ex.Message}" });
-                    }
+                    _context.Alunos.AddRange(alunosParaImportar);
+                    await _context.SaveChangesAsync();
+                }
+                catch (Exception ex)
+                {
+                    return StatusCode(500, new { message = $"Erro ao salvar no banco de dados: {ex.Message}" });
                 }
             }
 
@@ -680,6 +882,367 @@ public class AlunosController : ControllerBase
         {
             return StatusCode(500, new { message = $"Erro ao processar arquivo: {ex.Message}" });
         }
+    }
+
+    private static readonly string[] RequiredImportColumns =
+    {
+        "Nome",
+        "Data de Nascimento",
+        "CPF",
+        "RG",
+        "Gênero",
+        "Cor ou Etnia",
+        "Nome do Responsável",
+        "Nome do Pai",
+        "Nome da Mãe",
+        "Recebe Benefício",
+        "Renda Familiar",
+        "CEP",
+        "Endereço",
+        "Número",
+        "Bairro",
+        "Município",
+        "Estado",
+        "Zona de Moradia",
+        "Tipo de Moradia",
+        "Escola",
+        "Tipo Escola",
+        "Série",
+        "Turno",
+        "Número de Pessoas na Casa",
+        "Responsável Transporte",
+        "Meio Transporte",
+        "Contato 1",
+        "Contato 2",
+        "Bronquite/Asma",
+        "Doença Cardiovascular",
+        "Epilepsia",
+        "Convulsões",
+        "Diabetes",
+        "Problemas Auditivos",
+        "Alergia",
+        "Problemas Oculares",
+        "Problemas Ortopédicos",
+        "Medicamento",
+        "Cirurgia",
+        "Outro",
+        "Observações Gerais",
+        "Atividade 1",
+        "Atividade 2"
+    };
+
+    private static string NormalizeHeader(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        var normalized = value.Trim().ToLowerInvariant().Normalize(NormalizationForm.FormD);
+        var builder = new StringBuilder();
+        foreach (var c in normalized)
+        {
+            var category = CharUnicodeInfo.GetUnicodeCategory(c);
+            if (category == UnicodeCategory.NonSpacingMark)
+            {
+                continue;
+            }
+
+            if (char.IsLetterOrDigit(c))
+            {
+                builder.Append(c);
+            }
+        }
+
+        return builder.ToString();
+    }
+
+    private static string NormalizeValue(string? value) => NormalizeHeader(value);
+
+    private static string GetCellText(ExcelWorksheet worksheet, Dictionary<string, int> headers, int row, string column)
+    {
+        var key = NormalizeHeader(column);
+        if (!headers.TryGetValue(key, out var col))
+        {
+            return string.Empty;
+        }
+
+        var cell = worksheet.Cells[row, col];
+        return (cell.Text ?? cell.Value?.ToString() ?? string.Empty).Trim();
+    }
+
+    private static bool IsEmptyRow(ExcelWorksheet worksheet, int row, int columnCount)
+    {
+        for (var col = 1; col <= columnCount; col++)
+        {
+            if (!string.IsNullOrWhiteSpace(worksheet.Cells[row, col].Value?.ToString()))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static string OnlyDigits(string value) => Regex.Replace(value ?? string.Empty, @"[^\d]", "");
+
+    private static string? EmptyToNull(string value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static int ParseIntOrDefault(string value, int defaultValue)
+    {
+        return int.TryParse(value, out var result) ? result : defaultValue;
+    }
+
+    private static bool ParseBool(string value)
+    {
+        var normalized = NormalizeValue(value);
+        return normalized is "sim" or "s" or "true" or "1" or "x" or "yes";
+    }
+
+    private static bool TryGetDate(object? value, out DateTime date)
+    {
+        date = default;
+        if (value == null)
+        {
+            return false;
+        }
+
+        if (value is DateTime dt)
+        {
+            date = dt;
+            return true;
+        }
+
+        if (value is double dbl)
+        {
+            date = DateTime.FromOADate(dbl);
+            return true;
+        }
+
+        if (double.TryParse(value.ToString(), out var serial) && serial > 1 && serial < 1000000)
+        {
+            date = DateTime.FromOADate(serial);
+            return true;
+        }
+
+        var text = value.ToString()?.Trim();
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return false;
+        }
+
+        var formats = new[] { "dd/MM/yyyy", "d/M/yyyy", "yyyy-MM-dd", "dd-MM-yyyy", "d-M-yyyy" };
+        return DateTime.TryParseExact(text, formats, CultureInfo.GetCultureInfo("pt-BR"), DateTimeStyles.None, out date)
+            || DateTime.TryParse(text, CultureInfo.GetCultureInfo("pt-BR"), DateTimeStyles.None, out date)
+            || DateTime.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.None, out date);
+    }
+
+    private static Genero ParseGenero(string value)
+    {
+        var normalized = NormalizeValue(value);
+        if (int.TryParse(value, out var number) && Enum.IsDefined(typeof(Genero), number))
+        {
+            return (Genero)number;
+        }
+
+        return normalized switch
+        {
+            "masculino" => Genero.Masculino,
+            "feminino" => Genero.Feminino,
+            "outro" => Genero.Outro,
+            "prefironaodizer" or "naoinformado" => Genero.PrefiroNaoDizer,
+            _ => Genero.PrefiroNaoDizer
+        };
+    }
+
+    private static CorRaca ParseCorRaca(string value)
+    {
+        var normalized = NormalizeValue(value);
+        if (int.TryParse(value, out var number) && Enum.IsDefined(typeof(CorRaca), number))
+        {
+            return (CorRaca)number;
+        }
+
+        return normalized switch
+        {
+            "branco" or "branca" => CorRaca.Branco,
+            "preto" or "preta" => CorRaca.Preto,
+            "pardo" or "parda" => CorRaca.Pardo,
+            "amarelo" or "amarela" => CorRaca.Amarelo,
+            "indigena" => CorRaca.Indigena,
+            _ => CorRaca.NaoInformado
+        };
+    }
+
+    private static ZonaMoradia ParseZonaMoradia(string value)
+    {
+        var normalized = NormalizeValue(value);
+        if (int.TryParse(value, out var number) && Enum.IsDefined(typeof(ZonaMoradia), number))
+        {
+            return (ZonaMoradia)number;
+        }
+
+        return normalized == "rural" ? ZonaMoradia.Rural : ZonaMoradia.Urbana;
+    }
+
+    private static TipoMoradia ParseTipoMoradia(string value)
+    {
+        var normalized = NormalizeValue(value);
+        if (int.TryParse(value, out var number) && Enum.IsDefined(typeof(TipoMoradia), number))
+        {
+            return (TipoMoradia)number;
+        }
+
+        return normalized switch
+        {
+            "alugada" or "alugado" => TipoMoradia.Alugada,
+            "cedida" or "cedido" => TipoMoradia.Cedida,
+            "outro" or "outra" => TipoMoradia.Outro,
+            _ => TipoMoradia.Propria
+        };
+    }
+
+    private static TipoEscola ParseTipoEscola(string value)
+    {
+        var normalized = NormalizeValue(value);
+        if (normalized == "privada" || normalized == "particular" || normalized == "2")
+        {
+            return TipoEscola.Privada;
+        }
+
+        return TipoEscola.Publica;
+    }
+
+    private static Turno ParseTurno(string value)
+    {
+        var normalized = NormalizeValue(value);
+        if (int.TryParse(value, out var number))
+        {
+            if (number == 0) return Turno.Matutino;
+            if (Enum.IsDefined(typeof(Turno), number)) return (Turno)number;
+        }
+
+        return normalized switch
+        {
+            "vespertino" => Turno.Vespertino,
+            "noturno" => Turno.Noturno,
+            "integral" => Turno.Integral,
+            _ => Turno.Matutino
+        };
+    }
+
+    private static ResponsavelTransporte ParseResponsavelTransporte(string value)
+    {
+        var normalized = NormalizeValue(value);
+        if (int.TryParse(value, out var number) && Enum.IsDefined(typeof(ResponsavelTransporte), number))
+        {
+            return (ResponsavelTransporte)number;
+        }
+
+        return normalized switch
+        {
+            "pai" => ResponsavelTransporte.Pai,
+            "sozinho" or "sozinha" => ResponsavelTransporte.Sozinho,
+            "outromembrodafamilia" or "outrofamilia" => ResponsavelTransporte.OutroMembroFamilia,
+            "outronaomembro" or "outronaomembrodafamilia" => ResponsavelTransporte.OutroNaoMembroFamilia,
+            _ => ResponsavelTransporte.Mae
+        };
+    }
+
+    private static MeioTransporte ParseMeioTransporte(string value)
+    {
+        var normalized = NormalizeValue(value);
+        if (int.TryParse(value, out var number) && Enum.IsDefined(typeof(MeioTransporte), number))
+        {
+            return (MeioTransporte)number;
+        }
+
+        return normalized switch
+        {
+            "onibus" => MeioTransporte.Onibus,
+            "veiculoparticular" or "carro" => MeioTransporte.VeiculoParticular,
+            "bicicleta" => MeioTransporte.Bicicleta,
+            _ => MeioTransporte.Andando
+        };
+    }
+
+    private static TipoAtividade? ParseAtividade(string value, List<Atividade> atividades)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        if (int.TryParse(value, out var id) && id > 0)
+        {
+            return (TipoAtividade)id;
+        }
+
+        var normalized = NormalizeValue(value);
+        var atividade = atividades.FirstOrDefault(a =>
+            NormalizeValue(a.Nome) == normalized ||
+            NormalizeValue(Regex.Replace(a.Nome, @"\s*\([^)]*\)", "")) == normalized);
+
+        return atividade == null ? null : (TipoAtividade)atividade.Id;
+    }
+
+    private static AnamneseAluno? BuildAnamnese(ExcelWorksheet worksheet, Dictionary<string, int> headers, int row)
+    {
+        var enfermidades = new List<Enfermidade>();
+
+        void AddBool(string column, TipoEnfermidade tipo, string descricao)
+        {
+            if (ParseBool(GetCellText(worksheet, headers, row, column)))
+            {
+                enfermidades.Add(new Enfermidade
+                {
+                    TipoEnfermidade = tipo,
+                    Descricao = descricao,
+                    DataCadastro = DateTime.Now
+                });
+            }
+        }
+
+        void AddText(string column, string prefix)
+        {
+            var text = GetCellText(worksheet, headers, row, column);
+            if (!string.IsNullOrWhiteSpace(text))
+            {
+                enfermidades.Add(new Enfermidade
+                {
+                    TipoEnfermidade = TipoEnfermidade.Outros,
+                    Descricao = $"{prefix}: {text.Trim()}",
+                    DataCadastro = DateTime.Now
+                });
+            }
+        }
+
+        AddBool("Bronquite/Asma", TipoEnfermidade.BronquiteAsma, "Bronquite/Asma");
+        AddBool("Doença Cardiovascular", TipoEnfermidade.DoencaCoracao, "Doença Cardiovascular");
+        AddBool("Epilepsia", TipoEnfermidade.EpilepsiaConvulsoes, "Epilepsia");
+        AddBool("Convulsões", TipoEnfermidade.EpilepsiaConvulsoes, "Convulsões");
+        AddBool("Diabetes", TipoEnfermidade.Diabetes, "Diabetes");
+        AddBool("Problemas Auditivos", TipoEnfermidade.ProblemaAuditivo, "Problemas Auditivos");
+        AddBool("Alergia", TipoEnfermidade.Alergia, "Alergia");
+        AddBool("Problemas Oculares", TipoEnfermidade.ProblemaVisual, "Problemas Oculares");
+        AddBool("Problemas Ortopédicos", TipoEnfermidade.DoencaOrtopedica, "Problemas Ortopédicos");
+        AddText("Medicamento", "Medicamento");
+        AddText("Cirurgia", "Cirurgia");
+        AddText("Outro", "Outro");
+
+        var observacoes = GetCellText(worksheet, headers, row, "Observações Gerais");
+        if (!enfermidades.Any() && string.IsNullOrWhiteSpace(observacoes))
+        {
+            return null;
+        }
+
+        return new AnamneseAluno
+        {
+            PossuiEnfermidade = enfermidades.Any(),
+            ObservacoesGerais = EmptyToNull(observacoes),
+            DataCadastro = DateTime.Now,
+            Enfermidades = enfermidades
+        };
     }
 
     private static AlunoResponse MapToResponse(Aluno aluno)

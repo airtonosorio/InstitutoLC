@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Search, Filter, Eye, Edit, Trash2, X } from 'lucide-react';
 import { format, differenceInYears, parseISO } from 'date-fns';
 import api from '../api';
@@ -49,14 +49,16 @@ const meioTransporteMap = {
 
 const tipoEscolaMap = {
   0: 'Pública',
-  1: 'Privada'
+  1: 'Pública',
+  2: 'Privada'
 };
 
 const turnosMap = {
   0: 'Matutino',
-  1: 'Vespertino',
-  2: 'Noturno',
-  3: 'Integral'
+  1: 'Matutino',
+  2: 'Vespertino',
+  3: 'Noturno',
+  4: 'Integral'
 };
 
 const filterAtividadesPorIdade = (idade, list) => {
@@ -123,7 +125,6 @@ const applyPhoneMask = (val) => {
 
 export default function Consulta() {
   const [alunos, setAlunos] = useState([]);
-  const [filtered, setFiltered] = useState([]);
   const [loading, setLoading] = useState(true);
   const [atividadesList, setAtividadesList] = useState([]);
 
@@ -169,19 +170,14 @@ export default function Consulta() {
     setEditAnamnese(prev => ({ ...prev, [name]: finalVal }));
   };
 
-  const [todasTurmas, setTodasTurmas] = useState([]);
-
   const fetchAlunosETurmas = async () => {
     setLoading(true);
     try {
-      const [resAlunos, resTurmas, resAtiv] = await Promise.all([
+      const [resAlunos, resAtiv] = await Promise.all([
         api.get('/Alunos'),
-        api.get('/turmas'),
         api.get('/Atividades')
       ]);
       setAlunos(resAlunos.data);
-      setFiltered(resAlunos.data);
-      setTodasTurmas(resTurmas.data);
       setAtividadesList(resAtiv.data);
     } catch (err) {
       console.error("Erro ao buscar dados", err);
@@ -191,10 +187,34 @@ export default function Consulta() {
   };
 
   useEffect(() => {
-    fetchAlunosETurmas();
+    let ignore = false;
+
+    const loadInitialData = async () => {
+      setLoading(true);
+      try {
+        const [resAlunos, resAtiv] = await Promise.all([
+          api.get('/Alunos'),
+          api.get('/Atividades')
+        ]);
+
+        if (ignore) return;
+        setAlunos(resAlunos.data);
+        setAtividadesList(resAtiv.data);
+      } catch (err) {
+        console.error("Erro ao buscar dados", err);
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    };
+
+    loadInitialData();
+
+    return () => {
+      ignore = true;
+    };
   }, []);
 
-  useEffect(() => {
+  const filtered = useMemo(() => {
     let result = alunos;
 
     // Search by name or CPF
@@ -229,7 +249,7 @@ export default function Consulta() {
       result = result.filter(a => new Date(a.dataCadastro) <= end);
     }
 
-    setFiltered(result);
+    return result;
   }, [searchTerm, filters, alunos]);
 
   const handleDelete = async () => {
@@ -238,7 +258,7 @@ export default function Consulta() {
       await api.delete(`/Alunos/${alunoToDelete.id}`);
       setAlunos(alunos.filter(a => a.id !== alunoToDelete.id));
       setAlunoToDelete(null);
-    } catch (err) {
+    } catch {
       alert('Erro ao excluir aluno.');
     }
   };
@@ -280,8 +300,8 @@ export default function Consulta() {
       tipoMoradia: String(aluno.tipoMoradia),
       responsavelTransporte: String(aluno.responsavelTransporte),
       meioTransporte: String(aluno.meioTransporte),
-      tipoEscola: String(aluno.tipoEscola),
-      turno: String(aluno.turno),
+      tipoEscola: String(Number(aluno.tipoEscola) === 2 ? 2 : 1),
+      turno: String(Number(aluno.turno) === 0 ? 1 : aluno.turno),
       atividade1: aluno.atividade1 ? String(aluno.atividade1) : '',
       atividade2: aluno.atividade2 ? String(aluno.atividade2) : '',
       recebeBeneficio: !!aluno.recebeBeneficio
@@ -799,8 +819,8 @@ export default function Consulta() {
                     <div className="form-group">
                       <label>Tipo de Escola *</label>
                       <select name="tipoEscola" value={editForm.tipoEscola} onChange={handleEditChange} required>
-                        <option value="0">Pública</option>
-                        <option value="1">Privada</option>
+                        <option value="1">Pública</option>
+                        <option value="2">Privada</option>
                       </select>
                     </div>
                     <div className="form-group">
@@ -810,10 +830,10 @@ export default function Consulta() {
                     <div className="form-group">
                       <label>Turno *</label>
                       <select name="turno" value={editForm.turno} onChange={handleEditChange} required>
-                        <option value="0">Matutino</option>
-                        <option value="1">Vespertino</option>
-                        <option value="2">Noturno</option>
-                        <option value="3">Integral</option>
+                        <option value="1">Matutino</option>
+                        <option value="2">Vespertino</option>
+                        <option value="3">Noturno</option>
+                        <option value="4">Integral</option>
                       </select>
                     </div>
                     <div className="form-group">

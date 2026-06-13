@@ -85,9 +85,9 @@ export default function Cadastro() {
     zonaMoradia: '1',
     tipoMoradia: '1',
     escola: '',
-    tipoEscola: '0',
+    tipoEscola: '1',
     serie: '',
-    turno: '0',
+    turno: '1',
     numeroPessoasCasa: '',
     contato1: '',
     contato2: '',
@@ -241,7 +241,7 @@ export default function Cadastro() {
         nome: '', dataNascimento: '', cpf: '', rg: '', genero: '1', corRaca: '1',
         nomeResponsavel: '', nomePai: '', nomeMae: '', recebeBeneficio: false, rendaFamiliar: '',
         endereco: '', numeroEndereco: '', bairro: '', municipio: '', estado: '', cep: '',
-        zonaMoradia: '1', tipoMoradia: '1', escola: '', tipoEscola: '0', serie: '', turno: '0',
+        zonaMoradia: '1', tipoMoradia: '1', escola: '', tipoEscola: '1', serie: '', turno: '1',
         numeroPessoasCasa: '', contato1: '', contato2: '', responsavelTransporte: '1', meioTransporte: '1',
         atividade1: '', atividade2: ''
       });
@@ -401,8 +401,8 @@ export default function Cadastro() {
             <div className="form-group">
               <label>Tipo de Escola *</label>
               <select name="tipoEscola" value={formData.tipoEscola} onChange={handleChange} required>
-                <option value="0">Pública</option>
-                <option value="1">Privada</option>
+                <option value="1">Pública</option>
+                <option value="2">Privada</option>
               </select>
             </div>
             <div className="form-group">
@@ -412,10 +412,10 @@ export default function Cadastro() {
             <div className="form-group">
               <label>Turno *</label>
               <select name="turno" value={formData.turno} onChange={handleChange} required>
-                <option value="0">Matutino</option>
-                <option value="1">Vespertino</option>
-                <option value="2">Noturno</option>
-                <option value="3">Integral</option>
+                <option value="1">Matutino</option>
+                <option value="2">Vespertino</option>
+                <option value="3">Noturno</option>
+                <option value="4">Integral</option>
               </select>
             </div>
             <div className="form-group">
