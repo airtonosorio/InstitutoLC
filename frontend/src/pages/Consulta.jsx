@@ -705,12 +705,12 @@ export default function Consulta() {
                       {editIdade && <small className="idade-hint">Idade calculada: {editIdade.display}</small>}
                     </div>
                     <div className="form-group">
-                      <label>CPF *</label>
-                      <input type="text" name="cpf" value={editForm.cpf} onChange={handleEditChange} required placeholder="000.000.000-00" />
+                      <label>CPF (opcional)</label>
+                      <input type="text" name="cpf" value={editForm.cpf} onChange={handleEditChange} placeholder="000.000.000-00" />
                     </div>
                     <div className="form-group">
-                      <label>RG *</label>
-                      <input type="text" name="rg" value={editForm.rg} onChange={handleEditChange} required placeholder="00.000.000-0" />
+                      <label>RG (opcional)</label>
+                      <input type="text" name="rg" value={editForm.rg} onChange={handleEditChange} placeholder="00.000.000-0" />
                     </div>
                     <div className="form-group">
                       <label>Gênero *</label>

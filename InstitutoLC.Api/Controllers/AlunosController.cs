@@ -74,8 +74,11 @@ public class AlunosController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<AlunoResponse>> CreateAluno(CriarAlunoRequest request)
     {
-        // Verificar se CPF já existe
-        if (await _context.Alunos.AnyAsync(a => a.CPF == request.CPF))
+        request.CPF = request.CPF?.Trim() ?? string.Empty;
+        request.RG = request.RG?.Trim() ?? string.Empty;
+
+        // Verificar duplicidade somente quando o documento estiver preenchido.
+        if (request.CPF.Length > 0 && await _context.Alunos.AnyAsync(a => a.CPF == request.CPF))
         {
             return BadRequest(new { message = "CPF já cadastrado" });
         }
@@ -181,9 +184,10 @@ public class AlunosController : ControllerBase
         }
 
         // Verificar se CPF está sendo alterado e se já existe
-        if (!string.IsNullOrWhiteSpace(request.CPF) && request.CPF != aluno.CPF)
+        if (request.CPF != null)
         {
-            if (await _context.Alunos.AnyAsync(a => a.CPF == request.CPF && a.Id != id))
+            request.CPF = request.CPF.Trim();
+            if (request.CPF.Length > 0 && await _context.Alunos.AnyAsync(a => a.CPF == request.CPF && a.Id != id))
             {
                 return BadRequest(new { message = "CPF já cadastrado para outro aluno" });
             }
@@ -197,8 +201,8 @@ public class AlunosController : ControllerBase
         if (request.DataNascimento.HasValue)
             aluno.DataNascimento = request.DataNascimento.Value;
 
-        if (!string.IsNullOrWhiteSpace(request.RG))
-            aluno.RG = request.RG;
+        if (request.RG != null)
+            aluno.RG = request.RG.Trim();
 
         if (request.Genero.HasValue)
             aluno.Genero = request.Genero.Value;
@@ -458,19 +462,14 @@ public class AlunosController : ControllerBase
                     }
 
                     var cpf = OnlyDigits(GetCellText(worksheet, headers, row, "CPF"));
-                    if (string.IsNullOrWhiteSpace(cpf))
-                    {
-                        erros.Add($"Linha {row}: CPF é obrigatório");
-                        continue;
-                    }
 
-                    if (await _context.Alunos.AnyAsync(a => a.CPF == cpf))
+                    if (!string.IsNullOrEmpty(cpf) && await _context.Alunos.AnyAsync(a => a.CPF == cpf))
                     {
                         erros.Add($"Linha {row}: CPF {cpf} já cadastrado");
                         continue;
                     }
 
-                    if (alunosParaImportar.Any(a => a.CPF == cpf))
+                    if (!string.IsNullOrEmpty(cpf) && alunosParaImportar.Any(a => a.CPF == cpf))
                     {
                         erros.Add($"Linha {row}: CPF {cpf} duplicado no arquivo");
                         continue;

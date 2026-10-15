@@ -157,7 +157,8 @@ namespace InstitutoLC.Api.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CPF")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("[CPF] <> N''");
 
                     b.ToTable("Alunos");
                 });

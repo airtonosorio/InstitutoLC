@@ -81,7 +81,7 @@ public class InstitutoDbContext : DbContext
                 .HasForeignKey<AnamneseAluno>(a => a.AlunoId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            entity.HasIndex(e => e.CPF).IsUnique();
+            entity.HasIndex(e => e.CPF).IsUnique().HasFilter("[CPF] <> N''");
         });
 
         // Configuração da entidade AnamneseAluno
