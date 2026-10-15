@@ -12,13 +12,11 @@ public class CriarAlunoRequest
     [Required(ErrorMessage = "Data de nascimento é obrigatória")]
     public DateTime DataNascimento { get; set; }
 
-    [Required(ErrorMessage = "CPF é obrigatório")]
     [StringLength(14, ErrorMessage = "CPF deve ter no máximo 14 caracteres")]
-    public string CPF { get; set; } = string.Empty;
+    public string? CPF { get; set; }
 
-    [Required(ErrorMessage = "RG é obrigatório")]
     [StringLength(20, ErrorMessage = "RG deve ter no máximo 20 caracteres")]
-    public string RG { get; set; } = string.Empty;
+    public string? RG { get; set; }
 
     [Required(ErrorMessage = "Gênero é obrigatório")]
     public Genero Genero { get; set; }
